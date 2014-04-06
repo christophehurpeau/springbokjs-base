@@ -1,6 +1,6 @@
 {
   "name": "springbokjs-base",
-  "description": "Springbok Base, Gulp tasks and app skeleton",
+  "description": "Springbok Base, Gulp tasks",
   "keywords": ["springbokjs", "utils", "gulp", "skeleton"],
   "version": "0.1.0",
   "homepage": "springbokjs.org",
