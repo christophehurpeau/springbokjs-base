@@ -2,7 +2,7 @@
   "name": "springbokjs-base",
   "description": "Springbok Base, Gulp tasks",
   "keywords": ["springbokjs", "utils", "gulp", "skeleton"],
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",

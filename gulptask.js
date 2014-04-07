@@ -161,6 +161,10 @@ module.exports = function(pkg, gulp, options) {
 
         gulp.watch(['data/**/*', paths.dist + '**/*'])
             .on('change', function(file) {
+		if (file.path.substr(-4) === '.map') {
+			// ignore reload for source map files
+			return;
+		}
                 livereloadServer.changed(file.path);
             });
         gulp.watch(paths.server.scripts).on('change', function(file) {
