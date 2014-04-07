@@ -94,7 +94,7 @@ module.exports = function(pkg, gulp, options) {
     /* Scripts */
 
     gulp.task('lintjs', function() {
-        return gulp.src([ 'gulpfile.js', 'Gruntfile.js', paths.browser.scripts ])
+        return gulp.src([ 'gulpfile.js', paths.browser.scripts ])
             .pipe(jshint())
             .pipe(jshint.reporter('jshint-stylish'))
             .pipe(jshint.reporter('fail')
