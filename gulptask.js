@@ -98,12 +98,20 @@ module.exports = function(pkg, gulp, options) {
     /* Scripts */
 
     gulp.task('lintjs', function() {
+        var map = require('map-stream');
+        var myReporter = map(function (file, cb) {
+            if (!file.jshint.success) {
+                logAndNotify('jshint failed');
+            }
+            cb(null, file);
+        });
+
+
         return gulp.src([ 'gulpfile.js', paths.browser.scripts ])
+            .pipe(plumber())
             .pipe(jshint())
             .pipe(jshint.reporter('jshint-stylish'))
-            .pipe(jshint.reporter('fail')
-                .on('error', logAndNotify('jshint failed')) // Avoid creating a reporter :)
-            );
+            .pipe(myReporter);
     });
 
     gulp.task('concatjs', function() {
