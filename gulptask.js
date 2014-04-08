@@ -1,6 +1,7 @@
 module.exports = function(pkg, gulp, options) {
 
     var gutil = require('gulp-util');
+    var plumber = require('gulp-plumber');
     var concat = require('gulp-concat-sourcemap');
     var recess = require('gulp-recess');
     var less = require('gulp-less');
@@ -13,6 +14,8 @@ module.exports = function(pkg, gulp, options) {
     var rename = require('gulp-rename');
     //var notify = require('gulp-notify');
     var livereload = require('gulp-livereload');
+
+
     
     var Notification = require("node-notifier");
     var notifier = new Notification();
@@ -61,6 +64,7 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task('less', function() {
         return gulp.src(paths.browser.styles)
+            .pipe(plumber())
             .pipe(recess({
                 noOverqualifying: false
             }).on('error', logAndNotify('Recess failed')))
@@ -73,7 +77,7 @@ module.exports = function(pkg, gulp, options) {
                  modifyVars: {
                      production: false
                  }
-             }))
+             }).on('error', logAndNotify('Less failed')))
             .pipe(gulp.dest(paths.dist));
     });
 
@@ -122,10 +126,11 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task('ejs', function() {
         gulp.src(paths.browser.templatesEJS)
+            .pipe(plumber())
             .pipe(ejs({
                 compileDebug: true,
                 client: true
-            }).on('error', logAndNotify))
+            }).on('error', logAndNotify('EJS compile failed')))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.js'))
             .pipe(insert.prepend('window.templates = {};'+"\n"))
             .pipe(gulp.dest(paths.dist));
@@ -144,6 +149,10 @@ module.exports = function(pkg, gulp, options) {
     /* Tasks */
 
     var daemon = require('springbokjs-daemon').node([ '--harmony', paths.server.server ]);
+
+    process.on('exit', function(code) {
+        daemon.stop();
+    });
 
     gulp.task('js', ['lintjs', 'concatjs']);
     gulp.task('css', ['concatcss']);

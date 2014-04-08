@@ -1,8 +1,13 @@
 {
   "name": "springbokjs-base",
   "description": "Springbok Base, Gulp tasks",
-  "keywords": ["springbokjs", "utils", "gulp", "skeleton"],
-  "version": "0.1.1",
+  "keywords": [
+    "springbokjs",
+    "utils",
+    "gulp",
+    "skeleton"
+  ],
+  "version": "0.2.0",
   "homepage": "springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -10,7 +15,6 @@
     "type": "git",
     "url": "https://github.com/christophehurpeau/springbokjs-base.git"
   },
-
   "dependencies": {
     "springbokjs-shim": "0.1.0",
     "gulp": "^3.5.6",
@@ -33,6 +37,7 @@
     "connect-livereload": "^0.3.2",
     "gulp-livereload": "^1.2.0",
     "jshint-stylish": "~0.1.5",
-    "springbokjs-daemon": "~0.1.0"
+    "springbokjs-daemon": "~0.1.0",
+    "gulp-plumber": "^0.5.6"
   }
 }
