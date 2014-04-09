@@ -26,10 +26,16 @@ module.exports = function(pkg, gulp, options) {
         });
     };
 
-    var logAndNotify = function(notifyMessage) {
+    var logAndNotify = function(notifyMessage, doNotLog) {
         return function(err) {
             _notify('Gulp ERROR', notifyMessage || err);
-            gutil.log(err);
+            if (!doNotLog) {
+                if (err && !err.fileName && !err.lineNumber && err.message) {
+                    console.warn(err.message);
+                } else {
+                    gutil.log(err);
+                }
+            }
         };
     };
 
@@ -68,16 +74,16 @@ module.exports = function(pkg, gulp, options) {
             .pipe(recess({
                 noOverqualifying: false
             }).on('error', logAndNotify('Recess failed')))
-             .pipe(less({
-                 compress: false,
-                 cleancss: false,
-                 strictImports: true,
-                 strictUnits: true,
-                 sourceMap: true,
-                 modifyVars: {
-                     production: false
-                 }
-             }).on('error', logAndNotify('Less failed')))
+            .pipe(less({
+                compress: false,
+                cleancss: false,
+                strictImports: true,
+                strictUnits: true,
+                sourceMap: true,
+                modifyVars: {
+                    production: false
+                }
+            }).on('error', logAndNotify('Less failed')))
             .pipe(gulp.dest(paths.dist));
     });
 
@@ -98,12 +104,12 @@ module.exports = function(pkg, gulp, options) {
     /* Scripts */
 
     gulp.task('lintjs', function() {
-        var map = require('map-stream');
-        var myReporter = map(function (file, cb) {
+        var through2 = require('through2');
+        var myReporter = through2.obj(function (file, enc, next) {
             if (!file.jshint.success) {
-                logAndNotify('jshint failed');
+                logAndNotify('jshint failed', true)();
             }
-            cb(null, file);
+            next();
         });
 
 
@@ -117,7 +123,7 @@ module.exports = function(pkg, gulp, options) {
     gulp.task('concatjs', function() {
         var src = options.src.js || [];
         src.push(paths.browser.scripts)
-        gulp.src(src)
+        return gulp.src(src)
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.js'))
             .pipe(gulp.dest(paths.dist));
     });
@@ -133,7 +139,7 @@ module.exports = function(pkg, gulp, options) {
 
 
     gulp.task('ejs', function() {
-        gulp.src(paths.browser.templatesEJS)
+        return gulp.src(paths.browser.templatesEJS)
             .pipe(plumber())
             .pipe(ejs({
                 compileDebug: true,
@@ -147,7 +153,7 @@ module.exports = function(pkg, gulp, options) {
     /* Images */
 
     gulp.task('images', function() {
-        gulp.src(paths.browser.images)
+        return gulp.src(paths.browser.images)
             //.pipe(notify("Image: <%= file.relative %>"))
             .pipe(gulp.dest(paths['public'] + 'images/'));
     });
