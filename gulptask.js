@@ -190,7 +190,7 @@ module.exports = function(pkg, gulp, options) {
 		}
                 livereloadServer.changed(file.path);
             });
-        gulp.watch(paths.server.scripts).on('change', function(file) {
+        gulp.watch([ 'src/server/**/*' ]).on('change', function(file) {
             daemon.restart();
             _notify("Server restarted");
             livereloadServer.changed(file.path);
