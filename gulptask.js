@@ -2,7 +2,17 @@ module.exports = function(pkg, gulp, options) {
 
     var gutil = require('gulp-util');
     var plumber = require('gulp-plumber');
-    var concat = require('gulp-concat-sourcemap');
+    /*var concat = (function(){
+        var concat = require('gulp-concat-sourcemap');
+        return function(filename, options) {
+            options = options || {};
+            if (!options.sourceRoot) {
+                options.sourceRoot = '../';
+            }
+            return concat(filename, options);
+        };
+    })();*/
+    var concat = require('gulp-concat');
     var recess = require('gulp-recess');
     var less = require('gulp-less');
     var csso = require('gulp-csso');
@@ -12,11 +22,13 @@ module.exports = function(pkg, gulp, options) {
     var ejs = require('gulp-ejs-precompiler');
     var clean = require('gulp-clean');
     var rename = require('gulp-rename');
+    var gulpif = require('gulp-if');
     //var notify = require('gulp-notify');
     var livereload = require('gulp-livereload');
+    var through2 = require('through2');
+    var browserify = require('browserify');
 
 
-    
     var Notification = require("node-notifier");
     var notifier = new Notification();
     var _notify = function(title, message) {
@@ -43,9 +55,10 @@ module.exports = function(pkg, gulp, options) {
         'public': 'public/',
         dist: 'public/dist/',
         browser: {
+            mainscript: "src/browser/js/app.js",
             scripts: "src/browser/**/*.js",
             styles: 'src/browser/style/main.less',
-            templatesEJS: 'src/browser/templates/**/*.ejs',
+            templatesEJS: 'src/browser/templates/*.ejs',
             images: "src/browser/images/**/*",
         },
         server: {
@@ -104,7 +117,6 @@ module.exports = function(pkg, gulp, options) {
     /* Scripts */
 
     gulp.task('lintjs', function() {
-        var through2 = require('through2');
         var myReporter = through2.obj(function (file, enc, next) {
             if (!file.jshint.success) {
                 logAndNotify('jshint failed', true)();
@@ -120,11 +132,44 @@ module.exports = function(pkg, gulp, options) {
             .pipe(myReporter);
     });
 
-    gulp.task('concatjs', function() {
+    gulp.task('browserifyjs', function() {
         var src = options.src.js || [];
-        src.push(paths.browser.scripts)
+        src.push(paths.browser.mainscript)
         return gulp.src(src)
+            .pipe(plumber())
+            .pipe(through2.obj(function(file, encoding, next) {
+                if (file.path.substr(file.cwd.length  + 1 ) === paths.browser.mainscript) {
+                    var self = this;
+                    var bundle = browserify()
+                        .require(file, { entry: file.path })
+                        .bundle({ debug: !gulp.env.production }, function(err, source) {
+                            if (err) {
+                                logAndNotify('browserify failed', true)();
+                                self.emit('error', new gutil.PluginError('task browserifyjs', err));
+                                return;
+                            }
+                            file.contents = new Buffer(source);
+                            self.push(file);
+                            next();
+                        })
+                        .on('error', function (e) {
+                            logAndNotify('browserify failed', true)();
+                            self.emit('error', new gutil.PluginError('task browserifyjs', e));
+                        });
+                } else {
+                    this.push(file);
+                    next();
+                }
+            }).on('error', logAndNotify('browserify failed')))
+            //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.js'))
+            // TODO : merge source maps
+            .pipe(uglify({
+                //outSourceMap: true,
+                mangle: false,
+                compress: false,
+                output: { beautify: true },
+            }))
             .pipe(gulp.dest(paths.dist));
     });
 
@@ -168,7 +213,7 @@ module.exports = function(pkg, gulp, options) {
         daemon.stop();
     });
 
-    gulp.task('js', ['lintjs', 'concatjs']);
+    gulp.task('js', ['lintjs', 'browserifyjs']);
     gulp.task('css', ['concatcss']);
 
 
@@ -184,10 +229,10 @@ module.exports = function(pkg, gulp, options) {
 
         gulp.watch(['data/**/*', paths.dist + '**/*'])
             .on('change', function(file) {
-		if (file.path.substr(-4) === '.map') {
-			// ignore reload for source map files
-			return;
-		}
+                if (file.path.substr(-4) === '.map') {
+                    // ignore reload for source map files
+                    return;
+                }
                 livereloadServer.changed(file.path);
             });
         gulp.watch([ 'src/server/**/*' ]).on('change', function(file) {
