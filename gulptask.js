@@ -160,8 +160,8 @@ module.exports = function(pkg, gulp, options) {
             .pipe(through2.obj(function(file, encoding, next) {
                 if (file.path.substr(file.cwd.length  + 1 ) === paths.browser.mainscript) {
                     var self = this;
-                    var bundle = browserify()
-                        .require(file, { entry: file.path })
+                    var bundle = browserify([])
+                        .require(file, { entry: file.path, basedir: file.base })
                         .bundle({ debug: !gulp.env.production }, function(err, source) {
                             if (err) {
                                 logAndNotify('browserify failed', true)();
