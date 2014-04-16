@@ -1,5 +1,5 @@
 module.exports = function(pkg, gulp, options) {
-
+    var objectUtils = require('springbokjs-utils/object');
     var gutil = require('gulp-util');
     var plumber = require('gulp-plumber');
     /*var concat = (function(){
@@ -33,8 +33,11 @@ module.exports = function(pkg, gulp, options) {
     var notifier = new Notification();
     var _notify = function(title, message) {
         notifier.notify({
+            // https://github.com/mikaelbr/node-notifier/blob/master/lib/notifiers/notify-send.js
             message: message === undefined ? title : message,
-            title: title || 'Gulp'
+            title: title || 'Gulp',
+            expire: 2000,
+            hint: 'int:transient:1'
         });
     };
 
@@ -84,9 +87,9 @@ module.exports = function(pkg, gulp, options) {
     gulp.task('less', function() {
         return gulp.src(paths.browser.styles)
             .pipe(plumber())
-            .pipe(recess({
+            .pipe(recess(objectUtils.extend({
                 noOverqualifying: false
-            }).on('error', logAndNotify('Recess failed')))
+            }, options.recessOptions)).on('error', logAndNotify('Recess failed')))
             .pipe(less({
                 compress: false,
                 cleancss: false,
@@ -116,20 +119,37 @@ module.exports = function(pkg, gulp, options) {
 
     /* Scripts */
 
+    var previousLintJsSuccess = true;
     gulp.task('lintjs', function() {
+        var jshintReported = false;
         var myReporter = through2.obj(function (file, enc, next) {
             if (!file.jshint.success) {
-                logAndNotify('jshint failed', true)();
+                if (!jshintReported) {
+                    gutil.log(gutil.colors.red('✖'), 'jshint');
+                    logAndNotify('jshint failed :(' +(previousLintJsSuccess ? '' : ' Again !'), true)();
+                    jshintReported = true;
+                }
+                previousLintJsSuccess = false;
             }
+            this.push(file);
             next();
+        }, function (onEnd) {
+            if (!previousLintJsSuccess) {
+                previousLintJsSuccess = true;
+                logAndNotify('jshint successful :)', true)();
+                gutil.log(gutil.colors.green('✔'), 'jshint');
+            }
+            onEnd();
         });
 
 
         return gulp.src([ 'gulpfile.js', paths.browser.scripts ])
             .pipe(plumber())
-            .pipe(jshint())
-            .pipe(jshint.reporter('jshint-stylish'))
-            .pipe(myReporter);
+            .pipe(jshint(objectUtils.extend({
+                globalstrict: true, // because browserify encapsule them in functions
+            }, options.jshintOptions)))
+            .pipe(myReporter)
+            .pipe(jshint.reporter('jshint-stylish'));
     });
 
     gulp.task('browserifyjs', function() {
