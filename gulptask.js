@@ -1,7 +1,5 @@
 module.exports = function(pkg, gulp, options) {
     var objectUtils = require('springbokjs-utils/object');
-    var gutil = require('gulp-util');
-    var plumber = require('gulp-plumber');
     /*var concat = (function(){
         var concat = require('gulp-concat-sourcemap');
         return function(filename, options) {
@@ -12,22 +10,26 @@ module.exports = function(pkg, gulp, options) {
             return concat(filename, options);
         };
     })();*/
-    var concat = require('gulp-concat');
-    var recess = require('gulp-recess');
-    var less = require('gulp-less');
-    var csso = require('gulp-csso');
-    var jshint = require('gulp-jshint');
-    var uglify = require('gulp-uglify');
-    var insert = require('gulp-insert');
-    var ejs = require('gulp-ejs-precompiler');
-    var clean = require('gulp-clean');
-    var rename = require('gulp-rename');
-    var gulpif = require('gulp-if');
-    //var notify = require('gulp-notify');
-    var livereload = require('gulp-livereload');
     var through2 = require('through2');
+    var gutil = require('gulp-util');
     var browserify = require('browserify');
+    var es6ify = require('es6ify');
 
+    var concat = require('gulp-concat');
+    var csso = require('gulp-csso');
+    var ejs = require('gulp-ejs-precompiler');
+    var filesize = require('gulp-filesize');
+    var gulpif = require('gulp-if');
+    var insert = require('gulp-insert');
+    var jshint = require('gulp-jshint');
+    var less = require('gulp-less');
+    var livereload = require('gulp-livereload');
+    var plumber = require('gulp-plumber');
+    var recess = require('gulp-recess');
+    var rename = require('gulp-rename');
+    //var traceur = require('gulp-traceur');
+    var uglify = require('gulp-uglify');
+    //var notify = require('gulp-notify');
 
     var Notification = require("node-notifier");
     var notifier = new Notification();
@@ -36,7 +38,7 @@ module.exports = function(pkg, gulp, options) {
             // https://github.com/mikaelbr/node-notifier/blob/master/lib/notifiers/notify-send.js
             message: message === undefined ? title : message,
             title: title || 'Gulp',
-            expire: 2000,
+            //expire: 2000,
             hint: 'int:transient:1'
         });
     };
@@ -47,6 +49,7 @@ module.exports = function(pkg, gulp, options) {
             if (!doNotLog) {
                 if (err && !err.fileName && !err.lineNumber && err.message) {
                     console.warn(err.message);
+                    console.log(typeof(err.message));
                 } else {
                     gutil.log(err);
                 }
@@ -61,7 +64,7 @@ module.exports = function(pkg, gulp, options) {
             mainscript: "src/browser/js/app.js",
             scripts: "src/browser/**/*.js",
             styles: 'src/browser/style/main.less',
-            templatesEJS: 'src/browser/templates/*.ejs',
+            templatesEJS: 'src/browser/templates/**/*.ejs',
             images: "src/browser/images/**/*",
         },
         server: {
@@ -74,12 +77,6 @@ module.exports = function(pkg, gulp, options) {
     /* Import springbokjs-shim task */
 
     require('springbokjs-shim/gulptask.js')(gulp, paths.dist);
-
-
-    /* Clean */
-    gulp.task('clean', function() {
-        return gulp.src([paths.dist], {read: false}).pipe(clean());
-    });
 
 
     /* Styles */
@@ -134,7 +131,7 @@ module.exports = function(pkg, gulp, options) {
             this.push(file);
             next();
         }, function (onEnd) {
-            if (!previousLintJsSuccess) {
+            if (!previousLintJsSuccess && !jshintReported) {
                 previousLintJsSuccess = true;
                 logAndNotify('jshint successful :)', true)();
                 gutil.log(gutil.colors.green('✔'), 'jshint');
@@ -145,21 +142,47 @@ module.exports = function(pkg, gulp, options) {
 
         return gulp.src([ 'gulpfile.js', paths.browser.scripts ])
             .pipe(plumber())
-            .pipe(jshint(objectUtils.extend({
-                globalstrict: true, // because browserify encapsule them in functions
-            }, options.jshintOptions)))
+            //TODO add "use strict"; dynamcly because it's added by traceur compiler
+            .pipe(jshint(objectUtils.mextend(
+                {
+                    "globalstrict": true, // because browserify encapsule them in functions
+                    "esnext": true,
+                    "camelcase": true,
+                    "curly": true,
+                    "freeze": true,
+                    "indent": 4,
+                    "latedef": "nofunc",
+                    "newcap": true,
+                    "noarg": true,
+                    "undef": true,
+                    "unused": "vars",
+                    "maxparams": 8,
+                    "maxdepth": 6,
+                    "maxlen": 120,
+                    "boss": true,
+                    "eqnull": true,
+                    "browser": true,
+                },
+                options.jshintOptions,
+                options.jshintBrowserOptions
+            )))
             .pipe(myReporter)
             .pipe(jshint.reporter('jshint-stylish'));
     });
 
-    gulp.task('browserifyjs', function() {
+    gulp.task('browserifyjs', ['lintjs'], function() {
         var src = options.src.js || [];
         src.push(paths.browser.mainscript)
         return gulp.src(src)
             .pipe(plumber())
             .pipe(through2.obj(function(file, encoding, next) {
                 if (file.path.substr(file.cwd.length  + 1 ) === paths.browser.mainscript) {
-                    var self = this;
+                    var self = this, endWhen0 = 1;
+                    var decrement = function() {
+                        if (--endWhen0 === 0) {
+                            next();
+                        }
+                    }/*
                     var bundle = browserify([])
                         .require(file, { entry: file.path, basedir: file.base })
                         .bundle({ debug: !gulp.env.production }, function(err, source) {
@@ -168,13 +191,32 @@ module.exports = function(pkg, gulp, options) {
                                 self.emit('error', new gutil.PluginError('task browserifyjs', err));
                                 return;
                             }
+                            var newFile = new Vinyl({
+                                cwd: file.cwd,
+                                base: file.base,
+                                path: file.path + '.bundle',
+                                contents: new Buffer(source)
+                            });
+                            self.push(newFile);
+                            decrement();
+                        })
+                        .on('error', logAndNotify('browserify failed'));*/
+                    var bundle = browserify()
+                        .add(es6ify.runtime)
+                        .transform(es6ify)
+                        .require(file, { entry: file.path, basedir: file.base });
+                    if (options.browserify && options.browserify.beforeBundle) {
+                        options.browserify.beforeBundle(bundle);
+                    }
+                    bundle
+                        .bundle({ debug: !gulp.env.production }, function(err, source) {
+                            if (err) {
+                                self.emit('error', new gutil.PluginError('task browserifyjs', err));
+                                return;
+                            }
                             file.contents = new Buffer(source);
                             self.push(file);
-                            next();
-                        })
-                        .on('error', function (e) {
-                            logAndNotify('browserify failed', true)();
-                            self.emit('error', new gutil.PluginError('task browserifyjs', e));
+                            decrement();
                         });
                 } else {
                     this.push(file);
@@ -183,6 +225,7 @@ module.exports = function(pkg, gulp, options) {
             }).on('error', logAndNotify('browserify failed')))
             //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.js'))
+            //.pipe(traceur({ modules: 'register' }))
             // TODO : merge source maps
             .pipe(uglify({
                 //outSourceMap: true,
@@ -193,10 +236,13 @@ module.exports = function(pkg, gulp, options) {
             .pipe(gulp.dest(paths.dist));
     });
 
-    gulp.task('jsmin', ['concatjs'], function() {
+    gulp.task('jsmin', ['browserifyjs'], function() {
         gulp.src(paths.dist + '*.js')
+            .pipe(filesize())
             .pipe(uglify())
-            .pipe(gulp.dest(paths.dist));
+            //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.min.js'))
+            .pipe(gulp.dest(paths.dist))
+            .pipe(filesize());
     });
 
 
@@ -215,6 +261,9 @@ module.exports = function(pkg, gulp, options) {
             .pipe(gulp.dest(paths.dist));
     });
 
+    gulp.task('ejsmin', ['ejs'], function() {
+    });
+
     /* Images */
 
     gulp.task('images', function() {
@@ -223,6 +272,8 @@ module.exports = function(pkg, gulp, options) {
             .pipe(gulp.dest(paths['public'] + 'images/'));
     });
 
+    gulp.task('imagesmin', ['images'], function() {
+    });
 
 
     /* Tasks */
@@ -241,14 +292,20 @@ module.exports = function(pkg, gulp, options) {
     gulp.task('watch', ['default'], function() {
         daemon.start();
         var livereloadServer = livereload();
+        var logfileChanged = function(from) {
+            return function(file) {
+                console.log('[watch] ' + from + ': ' + file.path);
+            }
+        };
 
-        gulp.watch(paths.browser.scripts, ['js']);
-        gulp.watch([ 'src/**/*.less', 'src/**/*.css' ], ['css']);
-        gulp.watch(paths.browser.templatesEJS, ['ejs']);
-        gulp.watch(paths.browser.images, ['images']);
+        gulp.watch(paths.browser.scripts, ['js']).on('change', logfileChanged('paths.browser.scripts'));
+        gulp.watch([ 'src/**/*.less', 'src/**/*.css' ], ['css']).on('change', logfileChanged('css&less'));
+        gulp.watch(paths.browser.templatesEJS, ['ejs']).on('change', logfileChanged('ejs'));
+        gulp.watch(paths.browser.images, ['images']).on('change', logfileChanged('images'));
 
         gulp.watch(['data/**/*', paths.dist + '**/*'])
             .on('change', function(file) {
+                logfileChanged('data&dist')(file);
                 if (file.path.substr(-4) === '.map') {
                     // ignore reload for source map files
                     return;
@@ -256,13 +313,16 @@ module.exports = function(pkg, gulp, options) {
                 livereloadServer.changed(file.path);
             });
         gulp.watch([ 'src/server/**/*' ]).on('change', function(file) {
+            logfileChanged(file);
             daemon.restart();
             _notify("Server restarted");
-            livereloadServer.changed(file.path);
+            setTimeout(function() {
+                livereloadServer.changed(file.path);
+            }, 100);
         });
     });
 
-    gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
+    //gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
     gulp.task('default', ['css', 'js', 'ejs', 'images']);
 
 
