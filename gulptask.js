@@ -153,8 +153,7 @@ module.exports = function(pkg, gulp, options) {
 
         return gulp.src([ 'gulpfile.js', paths.browser.scripts ])
             .pipe(plumber())
-            .pipe(insert.prepend("\"use script\";\n"))
-            //TODO add "use strict"; dynamcly because it's added by traceur compiler
+            .pipe(insert.prepend("\"use strict\";\n"))
             .pipe(jshint(objectUtils.mextend(
                 {
                     "globalstrict": true, // because browserify encapsule them in functions
