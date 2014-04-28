@@ -7,7 +7,7 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.3.3",
+  "version": "0.3.5",
   "homepage": "springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -40,6 +40,7 @@
     "gulp-uglify": "^0.2.1",
     "gulp-util": "^2.2.14",
     "jshint-stylish": "~0.1.5",
+    "minimist": "0.0.8",
     "node-notifier": "^2.0.4",
     "springbokjs-daemon": "^0.1.0",
     "springbokjs-shim": "^0.1.9",

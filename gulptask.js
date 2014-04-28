@@ -31,6 +31,13 @@ module.exports = function(pkg, gulp, options) {
     var uglify = require('gulp-uglify');
     //var notify = require('gulp-notify');
 
+    var argv = require('minimist')(process.argv.slice(2), {
+        alias: {
+            'production': 'prod'
+        }
+    });
+    console.log(argv);
+
     var Notification = require("node-notifier");
     var notifier = new Notification();
     var _notify = function(title, message) {
@@ -47,21 +54,22 @@ module.exports = function(pkg, gulp, options) {
         return function(err) {
             _notify('Gulp ERROR', notifyMessage || err);
             if (!doNotLog) {
-                if (err && !err.fileName && !err.lineNumber && err.message) {
+                if (err && !err.fileName && !err.lineNumber && err.message && err.message !== '[object Object]') {
                     console.warn(err.message);
                     console.log(typeof(err.message));
                 } else {
                     gutil.log(err);
                 }
             }
+            this.emit && this.emit('end');
         };
     };
 
-    var paths = {
+    var paths = objectUtils.extend({
         'public': 'public/',
         dist: 'public/dist/',
         browser: {
-            mainscript: "src/browser/js/app.js",
+            mainscripts: "src/browser/js/app.js",
             scripts: "src/browser/**/*.js",
             styles: 'src/browser/style/main.less',
             templatesEJS: 'src/browser/templates/**/*.ejs',
@@ -71,7 +79,10 @@ module.exports = function(pkg, gulp, options) {
             scripts: 'src/server/**/*.js',
             server: 'src/server/server.js'
         }
-    };
+    }, options.paths);
+    if (!Array.isArray(paths.browser.mainscripts)) {
+        paths.browser.mainscripts = [ paths.browser.mainscripts ];
+    }
 
 
     /* Import springbokjs-shim task */
@@ -142,6 +153,7 @@ module.exports = function(pkg, gulp, options) {
 
         return gulp.src([ 'gulpfile.js', paths.browser.scripts ])
             .pipe(plumber())
+            .pipe(insert.prepend("\"use script\";\n"))
             //TODO add "use strict"; dynamcly because it's added by traceur compiler
             .pipe(jshint(objectUtils.mextend(
                 {
@@ -172,35 +184,18 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task('browserifyjs', ['lintjs'], function() {
         var src = options.src.js || [];
-        src.push(paths.browser.mainscript)
+        src.push.apply(src, paths.browser.mainscripts);
+
         return gulp.src(src)
             .pipe(plumber())
             .pipe(through2.obj(function(file, encoding, next) {
-                if (file.path.substr(file.cwd.length  + 1 ) === paths.browser.mainscript) {
+                if (paths.browser.mainscripts.indexOf(file.path.substr(file.cwd.length  + 1 )) !== -1) {
                     var self = this, endWhen0 = 1;
                     var decrement = function() {
                         if (--endWhen0 === 0) {
                             next();
                         }
-                    }/*
-                    var bundle = browserify([])
-                        .require(file, { entry: file.path, basedir: file.base })
-                        .bundle({ debug: !gulp.env.production }, function(err, source) {
-                            if (err) {
-                                logAndNotify('browserify failed', true)();
-                                self.emit('error', new gutil.PluginError('task browserifyjs', err));
-                                return;
-                            }
-                            var newFile = new Vinyl({
-                                cwd: file.cwd,
-                                base: file.base,
-                                path: file.path + '.bundle',
-                                contents: new Buffer(source)
-                            });
-                            self.push(newFile);
-                            decrement();
-                        })
-                        .on('error', logAndNotify('browserify failed'));*/
+                    }
                     var bundle = browserify()
                         .add(es6ify.runtime)
                         .transform(es6ify)
@@ -209,12 +204,12 @@ module.exports = function(pkg, gulp, options) {
                         options.browserify.beforeBundle(bundle);
                     }
                     bundle
-                        .bundle({ debug: !gulp.env.production }, function(err, source) {
+                        .bundle({ debug: !argv.production }, function(err, source) {
                             if (err) {
                                 self.emit('error', new gutil.PluginError('task browserifyjs', err));
                                 return;
                             }
-                            file.contents = new Buffer(source);
+                            file.contents = new Buffer('var basepath = ' + JSON.stringify(argv.basepath || '/') + ';' + source);
                             self.push(file);
                             decrement();
                         });
