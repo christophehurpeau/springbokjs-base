@@ -61,7 +61,6 @@ module.exports = function(pkg, gulp, options) {
                     gutil.log(err);
                 }
             }
-            this.emit && this.emit('end');
         };
     };
 
@@ -93,6 +92,7 @@ module.exports = function(pkg, gulp, options) {
     /* Styles */
 
     gulp.task('less', function() {
+        console.log(paths.browser.styles);
         return gulp.src(paths.browser.styles)
             .pipe(plumber())
             .pipe(recess(objectUtils.extend({
@@ -105,7 +105,7 @@ module.exports = function(pkg, gulp, options) {
                 strictUnits: true,
                 sourceMap: true,
                 modifyVars: {
-                    production: false
+                    production: !!argv.production
                 }
             }).on('error', logAndNotify('Less failed')))
             .pipe(gulp.dest(paths.dist));
@@ -206,7 +206,7 @@ module.exports = function(pkg, gulp, options) {
                         .bundle({ debug: !argv.production }, function(err, source) {
                             if (err) {
                                 self.emit('error', new gutil.PluginError('task browserifyjs', err));
-                                return;
+                                return decrement();
                             }
                             file.contents = new Buffer('var basepath = ' + JSON.stringify(argv.basepath || '/') + ';' + source);
                             self.push(file);
