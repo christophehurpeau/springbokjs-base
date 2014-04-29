@@ -208,7 +208,7 @@ module.exports = function(pkg, gulp, options) {
                                 self.emit('error', new gutil.PluginError('task browserifyjs', err));
                                 return decrement();
                             }
-                            file.contents = new Buffer('var basepath = ' + JSON.stringify(argv.basepath || '/') + ';' + source);
+                            file.contents = new Buffer(source);
                             self.push(file);
                             decrement();
                         });
@@ -219,6 +219,7 @@ module.exports = function(pkg, gulp, options) {
             }).on('error', logAndNotify('browserify failed')))
             //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.js'))
+            .pipe(insert.prepend('var basepath = ' + JSON.stringify(argv.basepath || '/') + ";\n"))
             //.pipe(traceur({ modules: 'register' }))
             // TODO : merge source maps
             .pipe(uglify({
