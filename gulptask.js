@@ -281,8 +281,8 @@ module.exports = function(pkg, gulp, options) {
     var livereloadPort = argv.livereloadPort || (port + 100);
     var daemon = require('springbokjs-daemon').node([
         '--harmony', paths.server.server,
-        '-port' + port,
-        '-livereloadPort' + livereloadPort
+        '--port=' + port,
+        '--livereloadPort=' + livereloadPort
     ]);
 
     process.on('exit', function(code) {
