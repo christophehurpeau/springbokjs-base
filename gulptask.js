@@ -36,7 +36,6 @@ module.exports = function(pkg, gulp, options) {
             'production': 'prod'
         }
     });
-    console.log(argv);
 
     var Notification = require("node-notifier");
     var notifier = new Notification();
@@ -273,20 +272,26 @@ module.exports = function(pkg, gulp, options) {
 
     /* Tasks */
 
-    var daemon = require('springbokjs-daemon').node([ '--harmony', paths.server.server ]);
+    gulp.task('js', ['lintjs', 'browserifyjs']);
+    gulp.task('css', ['concatcss']);
+
+    /* Watcher */
+
+    var port = argv.port || 3000;
+    var livereloadPort = argv.livereloadPort || (port + 100);
+    var daemon = require('springbokjs-daemon').node([
+        '--harmony', paths.server.server,
+        '-port' + port,
+        '-livereloadPort' + livereloadPort
+    ]);
 
     process.on('exit', function(code) {
         daemon.stop();
     });
 
-    gulp.task('js', ['lintjs', 'browserifyjs']);
-    gulp.task('css', ['concatcss']);
-
-
-
     gulp.task('watch', ['default'], function() {
         daemon.start();
-        var livereloadServer = livereload();
+        var livereloadServer = livereload(livereloadPort);
         var logfileChanged = function(from) {
             return function(file) {
                 console.log('[watch] ' + from + ': ' + file.path);
