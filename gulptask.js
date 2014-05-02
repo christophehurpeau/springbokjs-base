@@ -298,6 +298,7 @@ module.exports = function(pkg, gulp, options) {
             }
         };
 
+
         gulp.watch(paths.browser.scripts, ['js']).on('change', logfileChanged('paths.browser.scripts'));
         gulp.watch([ 'src/**/*.less', 'src/**/*.css' ], ['css']).on('change', logfileChanged('css&less'));
         gulp.watch(paths.browser.templatesEJS, ['ejs']).on('change', logfileChanged('ejs'));
@@ -313,12 +314,15 @@ module.exports = function(pkg, gulp, options) {
                 livereloadServer.changed(file.path);
             });
         gulp.watch([ 'src/server/**/*' ]).on('change', function(file) {
-            logfileChanged(file);
+            logfileChanged('server')(file);
             daemon.restart();
-            _notify("Server restarted");
-            setTimeout(function() {
-                livereloadServer.changed(file.path);
-            }, 100);
+            daemon.once('stdout', function(data) {
+                var string = data.toString().toLowerCase();
+                if (string.indexOf('listening') !== -1) {
+                    livereloadServer.changed(file.path);
+                    _notify("Server restarted");
+                }
+            });
         });
     });
 
