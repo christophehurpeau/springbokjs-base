@@ -94,9 +94,9 @@ module.exports = function(pkg, gulp, options) {
         console.log(paths.browser.styles);
         return gulp.src(paths.browser.styles)
             .pipe(plumber())
-            .pipe(recess(objectUtils.extend({
+            /*.pipe(recess(objectUtils.extend({
                 noOverqualifying: false
-            }, options.recessOptions)).on('error', logAndNotify('Recess failed')))
+            }, options.recessOptions)).on('error', logAndNotify('Recess failed')))*/
             .pipe(less({
                 compress: false,
                 cleancss: false,
