@@ -1,4 +1,5 @@
 module.exports = function(pkg, gulp, options) {
+    var S = require('springbokjs-utils');
     var objectUtils = require('springbokjs-utils/object');
     /*var concat = (function(){
         var concat = require('gulp-concat-sourcemap');
@@ -14,6 +15,7 @@ module.exports = function(pkg, gulp, options) {
     var gutil = require('gulp-util');
     var browserify = require('browserify');
     var es6ify = require('es6ify');
+    var exec = require('child_process').exec;
 
     var concat = require('gulp-concat');
     var csso = require('gulp-csso');
@@ -24,10 +26,9 @@ module.exports = function(pkg, gulp, options) {
     var jshint = require('gulp-jshint');
     var less = require('gulp-less');
     var livereload = require('gulp-livereload');
-    var plumber = require('gulp-plumber');
     var recess = require('gulp-recess');
     var rename = require('gulp-rename');
-    //var traceur = require('gulp-traceur');
+    var traceur = require('gulp-traceur');
     var uglify = require('gulp-uglify');
     //var notify = require('gulp-notify');
 
@@ -63,37 +64,44 @@ module.exports = function(pkg, gulp, options) {
         };
     };
 
+
+    /* OPTIONS */
+
     var paths = objectUtils.extend({
         'public': 'public/',
-        dist: 'public/dist/',
         browser: {
-            mainscripts: "src/browser/js/app.js",
-            scripts: "src/browser/**/*.js",
-            styles: 'src/browser/style/main.less',
-            templatesEJS: 'src/browser/templates/**/*.ejs',
-            images: "src/browser/images/**/*",
+            src: 'src/browser/',
+            dist: 'public/dist/',
+            mainscripts: "js/app.js",
+            scripts: "**/*.js",
+            styles: 'style/main.less',
+            templatesEJS: 'templates/**/*.ejs',
+            images: "images/**/*",
         },
-        server: {
-            scripts: 'src/server/**/*.js',
-            server: 'src/server/server.js'
-        }
+        server: 'src/server/'
     }, options.paths);
     if (!Array.isArray(paths.browser.mainscripts)) {
         paths.browser.mainscripts = [ paths.browser.mainscripts ];
     }
+    paths.server = objectUtils.extend({
+        dist: 'lib/server/',
+        scripts: '**/*.js',
+        startfile: 'server.js',
+        templatesEJS: '**/*.ejs'
+    }, S.isString(paths.server) ? { src: paths.server } : paths.server);
+
+    options.prefix = options.prefix || '';
 
 
     /* Import springbokjs-shim task */
 
-    require('springbokjs-shim/gulptask.js')(gulp, paths.dist);
+    require('springbokjs-shim/gulptask.js')(gulp, paths.browser.dist);
 
 
     /* Styles */
 
-    gulp.task('less', function() {
-        console.log(paths.browser.styles);
-        return gulp.src(paths.browser.styles)
-            .pipe(plumber())
+    gulp.task(options.prefix + 'browser-less', function() {
+        return gulp.src(paths.browser.src + paths.browser.styles)
             /*.pipe(recess(objectUtils.extend({
                 noOverqualifying: false
             }, options.recessOptions)).on('error', logAndNotify('Recess failed')))*/
@@ -107,33 +115,34 @@ module.exports = function(pkg, gulp, options) {
                     production: !!argv.production
                 }
             }).on('error', logAndNotify('Less failed')))
-            .pipe(gulp.dest(paths.dist));
+            .pipe(gulp.dest(paths.browser.dist));
     });
 
-    gulp.task('concatcss', ['less'], function() {
+    gulp.task(options.prefix + 'browser-concatcss', [options.prefix + 'browser-less'], function() {
         var src = options.src.css || [];
-        src.push(paths.dist + 'main.css');
+        src.push(paths.browser.dist + 'main.css');
         gulp.src(src)
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.css'))
-            .pipe(gulp.dest(paths.dist));
+            .pipe(gulp.dest(paths.browser.dist));
     });
 
-    gulp.task('cssmin', ['concatcss'], function() {
-        gulp.src(paths.dist + '*.css')
+    gulp.task(options.prefix + 'browser-cssmin', [options.prefix + 'browser-concatcss'], function() {
+        gulp.src(paths.browser.dist + '*.css')
             .pipe(csso())
-            .pipe(gulp.dest(paths.dist));
+            .pipe(gulp.dest(paths.browser.dist));
     });
 
-    /* Scripts */
 
-    var previousLintJsSuccess = true;
-    gulp.task('lintjs', function() {
-        var jshintReported = false;
-        var myReporter = through2.obj(function (file, enc, next) {
+    /* Lint Scripts */
+
+    var previousLintJsSuccess = null;
+    var jshintReported = false;
+    var jshintReporter = function() {
+        return through2.obj(function (file, enc, next) {
             if (!file.jshint.success) {
                 if (!jshintReported) {
                     gutil.log(gutil.colors.red('✖'), 'jshint');
-                    logAndNotify('jshint failed :(' +(previousLintJsSuccess ? '' : ' Again !'), true)();
+                    logAndNotify('jshint failed :(' +(previousLintJsSuccess === false ? '' : ' Again !'), true)();
                     jshintReported = true;
                 }
                 previousLintJsSuccess = false;
@@ -142,58 +151,67 @@ module.exports = function(pkg, gulp, options) {
             next();
         }, function (onEnd) {
             if (!previousLintJsSuccess && !jshintReported) {
+                if (previousLintJsSuccess === false) {
+                    logAndNotify('jshint successful :)', true)();
+                }
                 previousLintJsSuccess = true;
-                logAndNotify('jshint successful :)', true)();
                 gutil.log(gutil.colors.green('✔'), 'jshint');
             }
             onEnd();
         });
+    };
 
+    var jshintOptions = objectUtils.extend({
+        "globalstrict": true, // because browserify encapsule them in functions
+        "esnext": true,
+        "camelcase": true,
+        "curly": true,
+        "freeze": true,
+        "indent": 4,
+        "latedef": "nofunc",
+        "newcap": true,
+        "noarg": true,
+        "undef": true,
+        "unused": "vars",
+        "maxparams": 8,
+        "maxdepth": 6,
+        "maxlen": 120,
+        "boss": true,
+        "eqnull": true,
+        "node": true
+    }, options.jshintOptions);
+    options.jshintBrowserOptions = objectUtils.mextend(options.jshintBrowserOptions || {}, {"browser": true}, jshintOptions);
+    options.jshintServerOptions = objectUtils.extend(options.jshintServerOptions || {}, jshintOptions);
 
-        return gulp.src([ 'gulpfile.js', paths.browser.scripts ])
-            .pipe(plumber())
+    gulp.task(options.prefix + 'browser-lintjs', function() {
+        return gulp.src(paths.browser.src + paths.browser.scripts)
             .pipe(insert.prepend("\"use strict\";\n"))
-            .pipe(jshint(objectUtils.mextend(
-                {
-                    "globalstrict": true, // because browserify encapsule them in functions
-                    "esnext": true,
-                    "camelcase": true,
-                    "curly": true,
-                    "freeze": true,
-                    "indent": 4,
-                    "latedef": "nofunc",
-                    "newcap": true,
-                    "noarg": true,
-                    "undef": true,
-                    "unused": "vars",
-                    "maxparams": 8,
-                    "maxdepth": 6,
-                    "maxlen": 120,
-                    "boss": true,
-                    "eqnull": true,
-                    "browser": true,
-                },
-                options.jshintOptions,
-                options.jshintBrowserOptions
-            )))
-            .pipe(myReporter)
+            .pipe(jshint(options.jshintBrowserOptions))
+            .pipe(jshintReporter())
             .pipe(jshint.reporter('jshint-stylish'));
     });
 
-    gulp.task('browserifyjs', ['lintjs'], function() {
+    gulp.task(options.prefix + 'server-lintjs', function() {
+        return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ])
+            .pipe(insert.prepend("\"use strict\";\n"))
+            .pipe(jshint(options.jshintServerOptions))
+            .pipe(jshintReporter())
+            .pipe(jshint.reporter('jshint-stylish'));
+    });
+
+
+    /* Browser scripts */
+
+    gulp.task(options.prefix + 'browserifyjs', function() {
         var src = options.src.js || [];
-        src.push.apply(src, paths.browser.mainscripts);
+        var mainscripts = paths.browser.mainscripts.map(function(mainscript){
+            return paths.browser.src + mainscript;
+        });
+        src.push.apply(src, mainscripts);
 
         return gulp.src(src)
-            .pipe(plumber())
             .pipe(through2.obj(function(file, encoding, next) {
-                if (paths.browser.mainscripts.indexOf(file.path.substr(file.cwd.length  + 1 )) !== -1) {
-                    var self = this, endWhen0 = 1;
-                    var decrement = function() {
-                        if (--endWhen0 === 0) {
-                            next();
-                        }
-                    }
+                if (mainscripts.indexOf(file.path.substr(file.cwd.length  + 1 )) !== -1) {
                     var bundle = browserify()
                         .add(es6ify.runtime)
                         .transform(es6ify)
@@ -204,13 +222,13 @@ module.exports = function(pkg, gulp, options) {
                     bundle
                         .bundle({ debug: !argv.production }, function(err, source) {
                             if (err) {
-                                self.emit('error', new gutil.PluginError('task browserifyjs', err));
-                                return decrement();
+                                this.emit('error', new gutil.PluginError('task browserifyjs', err));
+                                return next();
                             }
                             file.contents = new Buffer(source);
-                            self.push(file);
-                            decrement();
-                        });
+                            this.push(file);
+                            next();
+                        }.bind(this));
                 } else {
                     this.push(file);
                     next();
@@ -227,60 +245,109 @@ module.exports = function(pkg, gulp, options) {
                 compress: false,
                 output: { beautify: true },
             }))
-            .pipe(gulp.dest(paths.dist));
+            .pipe(gulp.dest(paths.browser.dist));
     });
 
-    gulp.task('jsmin', ['browserifyjs'], function() {
-        gulp.src(paths.dist + '*.js')
+    gulp.task(options.prefix + 'jsmin', [options.prefix + 'browserifyjs'], function() {
+        gulp.src(paths.browser.dist + '*.js')
             .pipe(filesize())
             .pipe(uglify())
             //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.min.js'))
-            .pipe(gulp.dest(paths.dist))
+            .pipe(gulp.dest(paths.browser.dist))
             .pipe(filesize());
     });
 
 
-    /* Templates */
+    /* Server scripts */
+
+    gulp.task(options.prefix + 'server-buildjs', function() {
+        return gulp.src(paths.server.src + paths.server.scripts)
+            .pipe(traceur({ }).on('error', logAndNotify('Traceur failed')))
+            .pipe(gulp.dest(paths.server.dist));
+    });
 
 
-    gulp.task('ejs', function() {
-        return gulp.src(paths.browser.templatesEJS)
-            .pipe(plumber())
-            .pipe(ejs({
-                compileDebug: true,
-                client: true
-            }).on('error', logAndNotify('EJS compile failed')))
+    /* Browser Templates */
+
+    gulp.task(options.prefix + 'browser-ejs', function() {
+        return gulp.src(paths.browser.src + paths.browser.templatesEJS)
+            .pipe(ejs({ compileDebug: true, client: true }).on('error', logAndNotify('EJS compile failed')))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.js'))
             .pipe(insert.prepend('window.templates = {};'+"\n"))
-            .pipe(gulp.dest(paths.dist));
+            .pipe(gulp.dest(paths.browser.dist));
     });
 
-    gulp.task('ejsmin', ['ejs'], function() {
+    gulp.task(options.prefix + 'browser-ejsmin', function() {
+        return gulp.src(paths.browser.src + paths.browser.templatesEJS)
+            .pipe(ejs({ compileDebug: false, client: true }).on('error', logAndNotify('EJS compile failed')))
+            .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.min.js'))
+            .pipe(insert.prepend('window.templates = {};'+"\n"))
+            .pipe(gulp.dest(paths.browser.dist));
     });
+
+
+    /* Server Templates */
+
+    gulp.task(options.prefix + 'server-ejs', function() {
+        return gulp.src(paths.server.src + paths.server.templatesEJS)
+            //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
+            .pipe(gulp.dest(paths.server.dist));
+    });
+
+    gulp.task(options.prefix + 'server-ejsmin', function() {
+        return gulp.src(paths.server.src + paths.server.templatesEJS)
+            //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('server EJS compile failed')))
+            .pipe(gulp.dest(paths.server.dist));
+    });
+
 
     /* Images */
 
-    gulp.task('images', function() {
-        return gulp.src(paths.browser.images)
+    gulp.task(options.prefix + 'browser-images', function() {
+        return gulp.src(paths.browser.src + paths.browser.images)
             //.pipe(notify("Image: <%= file.relative %>"))
             .pipe(gulp.dest(paths['public'] + 'images/'));
     });
 
-    gulp.task('imagesmin', ['images'], function() {
+    gulp.task(options.prefix + 'browser-imagesmin', [options.prefix + 'browser-images'], function() {
     });
 
 
     /* Tasks */
 
-    gulp.task('js', ['lintjs', 'browserifyjs']);
-    gulp.task('css', ['concatcss']);
+    gulp.task(options.prefix + 'browser-js', [options.prefix + 'browser-lintjs', options.prefix + 'browserifyjs']);
+    gulp.task(options.prefix + 'browser-css', [options.prefix + 'browser-concatcss']);
+    gulp.task(options.prefix + 'server-js', [options.prefix + 'server-lintjs', options.prefix + 'server-buildjs']);
+
+    //gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
+    gulp.task(options.prefix + 'default', [
+        options.prefix + 'browser-css',
+        options.prefix + 'browser-js',
+        options.prefix + 'browser-ejs',
+        options.prefix + 'browser-images',
+
+        options.prefix + 'server-js',
+        options.prefix + 'server-ejs'
+    ]);
+
+    gulp.task(options.prefix + 'clean', function() {
+        [paths.server.dist, paths.browser.dist].forEach(function(path) {
+            console.log('Removing ' + path);
+            exec('rm -Rf ' + path);
+        });
+    });
+
 
     /* Watcher */
 
-    var port = argv.port || 3000;
-    var livereloadPort = argv.livereloadPort || (port + 100);
+    if (argv.port) {
+        console.warn('--port is deprecated, use --startport now');
+        argv.startport = argv.port;
+    }
+    var port = argv.startport || 3000;
+    var livereloadPort = argv.startlivereloadPort || (port + 100);
     var daemon = require('springbokjs-daemon').node([
-        '--harmony', paths.server.server,
+        '--harmony', paths.server.dist + paths.server.startfile,
         '--port=' + port,
         '--livereloadPort=' + livereloadPort
     ]);
@@ -289,7 +356,7 @@ module.exports = function(pkg, gulp, options) {
         daemon.stop();
     });
 
-    gulp.task('watch', ['default'], function() {
+    gulp.task(options.prefix + 'watch', [options.prefix + 'default'], function() {
         daemon.start();
         var livereloadServer = livereload(livereloadPort);
         var logfileChanged = function(from) {
@@ -299,12 +366,19 @@ module.exports = function(pkg, gulp, options) {
         };
 
 
-        gulp.watch(paths.browser.scripts, ['js']).on('change', logfileChanged('paths.browser.scripts'));
-        gulp.watch([ 'src/**/*.less', 'src/**/*.css' ], ['css']).on('change', logfileChanged('css&less'));
-        gulp.watch(paths.browser.templatesEJS, ['ejs']).on('change', logfileChanged('ejs'));
-        gulp.watch(paths.browser.images, ['images']).on('change', logfileChanged('images'));
+        gulp.watch(paths.browser.src + paths.browser.scripts,[options.prefix + 'browser-js'])
+            .on('change', logfileChanged('paths.browser.scripts'));
+        gulp.watch([ paths.browser.src + '**/*.less', paths.browser.src + '**/*.css' ], [options.prefix + 'browser-css'])
+            .on('change', logfileChanged('css&less'));
+        gulp.watch(paths.browser.src + paths.browser.templatesEJS, [options.prefix + 'browser-ejs'])
+            .on('change', logfileChanged('ejs'));
+        gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
+            .on('change', logfileChanged('images'));
 
-        gulp.watch(['data/**/*', paths.dist + '**/*'])
+        gulp.watch(paths.server.src + paths.server.scripts, [options.prefix + 'server-js'])
+            .on('change', logfileChanged('images'));
+
+        gulp.watch(['data/**/*', paths.browser.dist + '**/*'])
             .on('change', function(file) {
                 logfileChanged('data&dist')(file);
                 if (file.path.substr(-4) === '.map') {
@@ -313,7 +387,7 @@ module.exports = function(pkg, gulp, options) {
                 }
                 livereloadServer.changed(file.path);
             });
-        gulp.watch([ 'src/server/**/*' ]).on('change', function(file) {
+        gulp.watch([ paths.server.dist + '**/*' ]).on('change', function(file) {
             logfileChanged('server')(file);
             daemon.restart();
             daemon.once('stdout', function(data) {
@@ -325,11 +399,6 @@ module.exports = function(pkg, gulp, options) {
             });
         });
     });
-
-    //gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
-    gulp.task('default', ['css', 'js', 'ejs', 'images']);
-
-
 
 
     /*
@@ -354,4 +423,18 @@ module.exports = function(pkg, gulp, options) {
       });
     });
     */
+};
+
+module.exports.multi = function(pkg, gulp, multi) {
+    var prefixes = Object.keys(multi);
+    prefixes.forEach(function(prefix) {
+        var options = multi[prefix];
+        options.prefix = prefix;
+        module.exports(pkg, gulp, options);
+    });
+    ['default', 'watch', 'clean'].forEach(function(task) {
+        gulp.task(task, prefixes.map(function(prefix) {
+            return prefix + task;
+        }));
+    });
 };
