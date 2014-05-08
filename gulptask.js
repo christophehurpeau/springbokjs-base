@@ -83,7 +83,7 @@ module.exports = function(pkg, gulp, options) {
     if (!Array.isArray(paths.browser.mainscripts)) {
         paths.browser.mainscripts = [ paths.browser.mainscripts ];
     }
-    paths.server = objectUtils.extend({
+    paths.server = paths.server !== false && objectUtils.extend({
         dist: 'lib/server/',
         scripts: '**/*.js',
         startfile: 'server.js',
@@ -191,13 +191,15 @@ module.exports = function(pkg, gulp, options) {
             .pipe(jshint.reporter('jshint-stylish'));
     });
 
-    gulp.task(options.prefix + 'server-lintjs', function() {
-        return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ])
-            .pipe(insert.prepend("\"use strict\";\n"))
-            .pipe(jshint(options.jshintServerOptions))
-            .pipe(jshintReporter())
-            .pipe(jshint.reporter('jshint-stylish'));
-    });
+    if (paths.server) {
+        gulp.task(options.prefix + 'server-lintjs', function() {
+            return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ])
+                .pipe(insert.prepend("\"use strict\";\n"))
+                .pipe(jshint(options.jshintServerOptions))
+                .pipe(jshintReporter())
+                .pipe(jshint.reporter('jshint-stylish'));
+        });
+    }
 
 
     /* Browser scripts */
@@ -260,12 +262,13 @@ module.exports = function(pkg, gulp, options) {
 
     /* Server scripts */
 
-    gulp.task(options.prefix + 'server-buildjs', function() {
-        return gulp.src(paths.server.src + paths.server.scripts)
-            .pipe(traceur({ }).on('error', logAndNotify('Traceur failed')))
-            .pipe(gulp.dest(paths.server.dist));
-    });
-
+    if (paths.server) {
+        gulp.task(options.prefix + 'server-buildjs', function() {
+            return gulp.src(paths.server.src + paths.server.scripts)
+                .pipe(traceur({ }).on('error', logAndNotify('Traceur failed')))
+                .pipe(gulp.dest(paths.server.dist));
+        });
+    }
 
     /* Browser Templates */
 
@@ -288,17 +291,19 @@ module.exports = function(pkg, gulp, options) {
 
     /* Server Templates */
 
-    gulp.task(options.prefix + 'server-ejs', function() {
-        return gulp.src(paths.server.src + paths.server.templatesEJS)
-            //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
-            .pipe(gulp.dest(paths.server.dist));
-    });
+    if (paths.server) {
+        gulp.task(options.prefix + 'server-ejs', function() {
+            return gulp.src(paths.server.src + paths.server.templatesEJS)
+                //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
+                .pipe(gulp.dest(paths.server.dist));
+        });
 
-    gulp.task(options.prefix + 'server-ejsmin', function() {
-        return gulp.src(paths.server.src + paths.server.templatesEJS)
-            //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('server EJS compile failed')))
-            .pipe(gulp.dest(paths.server.dist));
-    });
+        gulp.task(options.prefix + 'server-ejsmin', function() {
+            return gulp.src(paths.server.src + paths.server.templatesEJS)
+                //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('server EJS compile failed')))
+                .pipe(gulp.dest(paths.server.dist));
+        });
+    }
 
 
     /* Images */
@@ -317,23 +322,31 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task(options.prefix + 'browser-js', [options.prefix + 'browser-lintjs', options.prefix + 'browserifyjs']);
     gulp.task(options.prefix + 'browser-css', [options.prefix + 'browser-concatcss']);
-    gulp.task(options.prefix + 'server-js', [options.prefix + 'server-lintjs', options.prefix + 'server-buildjs']);
+    if (paths.server) {
+        gulp.task(options.prefix + 'server-js', [options.prefix + 'server-lintjs', options.prefix + 'server-buildjs']);
+    }
 
     //gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
-    gulp.task(options.prefix + 'default', [
+    var tasksDefault = [
         options.prefix + 'browser-css',
         options.prefix + 'browser-js',
         options.prefix + 'browser-ejs',
-        options.prefix + 'browser-images',
-
-        options.prefix + 'server-js',
-        options.prefix + 'server-ejs'
-    ]);
+        options.prefix + 'browser-images'
+    ];
+    if (paths.server !== false) {
+        tasksDefault.push.apply(tasksDefault, [
+            options.prefix + 'server-js',
+            options.prefix + 'server-ejs'
+        ]);
+    }
+    gulp.task(options.prefix + 'default', tasksDefault);
 
     gulp.task(options.prefix + 'clean', function() {
-        [paths.server.dist, paths.browser.dist].forEach(function(path) {
-            console.log('Removing ' + path);
-            exec('rm -Rf ' + path);
+        [paths.server && paths.server.dist, paths.browser.dist].forEach(function(path) {
+            if (path) {
+                console.log('Removing ' + path);
+                exec('rm -Rf ' + path);
+            }
         });
     });
 
@@ -346,18 +359,20 @@ module.exports = function(pkg, gulp, options) {
     }
     var port = argv.startport || 3000;
     var livereloadPort = argv.startlivereloadPort || (port + 100);
-    var daemon = require('springbokjs-daemon').node([
-        '--harmony', paths.server.dist + paths.server.startfile,
-        '--port=' + port,
-        '--livereloadPort=' + livereloadPort
-    ]);
 
-    process.on('exit', function(code) {
-        daemon.stop();
-    });
+    if (paths.server) {
+        var daemon = require('springbokjs-daemon').node([
+            '--harmony', paths.server.dist + paths.server.startfile,
+            '--port=' + port,
+            '--livereloadPort=' + livereloadPort
+        ]);
+
+        process.on('exit', function(code) {
+            daemon.stop();
+        });
+    }
 
     gulp.task(options.prefix + 'watch', [options.prefix + 'default'], function() {
-        daemon.start();
         var livereloadServer = livereload(livereloadPort);
         var logfileChanged = function(from) {
             return function(file) {
@@ -375,8 +390,28 @@ module.exports = function(pkg, gulp, options) {
         gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
             .on('change', logfileChanged('images'));
 
-        gulp.watch(paths.server.src + paths.server.scripts, [options.prefix + 'server-js'])
-            .on('change', logfileChanged('images'));
+        if (paths.server) {
+            daemon.start();
+            gulp.watch(paths.server.src + paths.server.scripts, [options.prefix + 'server-js'])
+                .on('change', logfileChanged('images'));
+
+            gulp.watch([ paths.server.dist + '**/*' ]).on('change', function(file) {
+                logfileChanged('server')(file);
+                daemon.restart();
+                daemon.once('stdout', function(data) {
+                    var string = data.toString().toLowerCase();
+                    if (string.indexOf('listening') !== -1) {
+                        livereloadServer.changed(file.path);
+                        _notify("Server restarted");
+                    }
+                });
+            });
+        } else {
+            var express = require('express');
+            var app = express();
+            app.use(express.static(paths.public));
+            app.listen(port, gutil.log.bind(null,'static server started, listening on port ' + gutil.colors.magenta(port)));
+        }
 
         gulp.watch(['data/**/*', paths.browser.dist + '**/*'])
             .on('change', function(file) {
@@ -387,17 +422,6 @@ module.exports = function(pkg, gulp, options) {
                 }
                 livereloadServer.changed(file.path);
             });
-        gulp.watch([ paths.server.dist + '**/*' ]).on('change', function(file) {
-            logfileChanged('server')(file);
-            daemon.restart();
-            daemon.once('stdout', function(data) {
-                var string = data.toString().toLowerCase();
-                if (string.indexOf('listening') !== -1) {
-                    livereloadServer.changed(file.path);
-                    _notify("Server restarted");
-                }
-            });
-        });
     });
 
 
