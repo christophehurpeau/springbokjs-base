@@ -28,7 +28,9 @@ module.exports = function(pkg, gulp, options) {
     var livereload = require('gulp-livereload');
     var recess = require('gulp-recess');
     var rename = require('gulp-rename');
-    var traceur = require('gulp-traceur');
+    var sourcemaps = require('gulp-sourcemaps');
+    //var es6transpiler = require('gulp-traceur');
+    var es6transpiler = require('gulp-es6-transpiler');
     var uglify = require('gulp-uglify');
     //var notify = require('gulp-notify');
 
@@ -97,36 +99,41 @@ module.exports = function(pkg, gulp, options) {
 
     require('springbokjs-shim/gulptask.js')(gulp, paths.browser.dist);
 
-
     /* Styles */
 
-    gulp.task(options.prefix + 'browser-less', function() {
-        return gulp.src(paths.browser.src + paths.browser.styles)
-            /*.pipe(recess(objectUtils.extend({
-                noOverqualifying: false
-            }, options.recessOptions)).on('error', logAndNotify('Recess failed')))*/
-            .pipe(less({
-                compress: false,
-                cleancss: false,
-                strictImports: true,
-                strictUnits: true,
-                sourceMap: true,
-                modifyVars: {
-                    production: !!argv.production
-                }
-            }).on('error', logAndNotify('Less failed')))
-            .pipe(gulp.dest(paths.browser.dist));
-    });
+    var lessOptions = {
+        compress: false,
+        cleancss: false,
+        strictImports: true,
+        strictUnits: true,
+        sourceMap: true,
+        modifyVars: {
+            production: !!argv.production
+        }
+    };
+    if (paths.browser.independantStyles) {
+        gulp.task(options.prefix + 'browser-independant-styles', function() {
+            return gulp.src(paths.browser.src + paths.browser.independantStyles)
+                /*.pipe(recess(objectUtils.extend({
+                    noOverqualifying: false
+                }, options.recessOptions)).on('error', logAndNotify('Recess failed')))*/
+                .pipe(less(lessOptions).on('error', logAndNotify('Less failed')))
+                .pipe(gulp.dest(paths.browser.dist));
+        });
+    }
 
-    gulp.task(options.prefix + 'browser-concatcss', [options.prefix + 'browser-less'], function() {
+    gulp.task(options.prefix + 'browser-styles', function() {
         var src = options.src.css || [];
-        src.push(paths.browser.dist + 'main.css');
+        src.push(paths.browser.src + paths.browser.styles);
         gulp.src(src)
-            .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.css'))
+            .pipe(sourcemaps.init())
+                .pipe(gulpif(/.less$/, less(lessOptions).on('error', logAndNotify('Less failed'))))
+                .pipe(concat(pkg.name + /* '-' + pkg.version +*/ '.css'))
+            .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' }))
             .pipe(gulp.dest(paths.browser.dist));
     });
 
-    gulp.task(options.prefix + 'browser-cssmin', [options.prefix + 'browser-concatcss'], function() {
+    gulp.task(options.prefix + 'browser-styles-min', [options.prefix + 'browser-styles'], function() {
         gulp.src(paths.browser.dist + '*.css')
             .pipe(csso())
             .pipe(gulp.dest(paths.browser.dist));
@@ -239,7 +246,7 @@ module.exports = function(pkg, gulp, options) {
             //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.js'))
             .pipe(insert.prepend('var basepath = ' + JSON.stringify(argv.basepath || '/') + ";\n"))
-            //.pipe(traceur({ modules: 'register' }))
+            //.pipe(es6transpiler({ modules: 'register' }))
             // TODO : merge source maps
             .pipe(uglify({
                 //outSourceMap: true,
@@ -265,7 +272,7 @@ module.exports = function(pkg, gulp, options) {
     if (paths.server) {
         gulp.task(options.prefix + 'server-buildjs', function() {
             return gulp.src(paths.server.src + paths.server.scripts)
-                .pipe(traceur({ }).on('error', logAndNotify('Traceur failed')))
+                .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
     }
@@ -321,18 +328,21 @@ module.exports = function(pkg, gulp, options) {
     /* Tasks */
 
     gulp.task(options.prefix + 'browser-js', [options.prefix + 'browser-lintjs', options.prefix + 'browserifyjs']);
-    gulp.task(options.prefix + 'browser-css', [options.prefix + 'browser-concatcss']);
+    //gulp.task(options.prefix + 'browser-css', [options.prefix + 'browser-concatcss']);
     if (paths.server) {
         gulp.task(options.prefix + 'server-js', [options.prefix + 'server-lintjs', options.prefix + 'server-buildjs']);
     }
 
     //gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
     var tasksDefault = [
-        options.prefix + 'browser-css',
+        options.prefix + 'browser-styles',
         options.prefix + 'browser-js',
         options.prefix + 'browser-ejs',
         options.prefix + 'browser-images'
     ];
+    if (paths.browser.independantStyles) {
+        tasksDefault.push(options.prefix + 'browser-independant-styles');
+    }
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
             options.prefix + 'server-js',
@@ -410,6 +420,7 @@ module.exports = function(pkg, gulp, options) {
             var express = require('express');
             var app = express();
             app.use(express.static(paths.public));
+            app.use('/src', express.static('src/'));
             app.listen(port, gutil.log.bind(null,'static server started, listening on port ' + gutil.colors.magenta(port)));
         }
 
