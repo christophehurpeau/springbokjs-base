@@ -180,6 +180,7 @@ module.exports = function(pkg, gulp, options) {
         "noarg": true,
         "undef": true,
         "unused": "vars",
+        "laxbreak": true,
         "maxparams": 8,
         "maxdepth": 6,
         "maxlen": 120,
