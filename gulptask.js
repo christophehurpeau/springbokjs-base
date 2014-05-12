@@ -132,11 +132,12 @@ module.exports = function(pkg, gulp, options) {
         sourceMap: true,
         modifyVars: {
             production: !!argv.production
-        }
+        },
+        sourceMapRootpath: paths.browser.src
     };
     if (paths.browser.independantStyles) {
         gulp.task(options.prefix + 'browser-independant-styles', function() {
-            return gulp.src(paths.browser.src + paths.browser.independantStyles)
+            return gulp.src(paths.browser.independantStyles, { base: paths.browser.src })
                 /*.pipe(recess(objectUtils.extend({
                     noOverqualifying: false
                 }, options.recessOptions)).on('error', logAndNotify('Recess failed')))*/
@@ -148,11 +149,11 @@ module.exports = function(pkg, gulp, options) {
     gulp.task(options.prefix + 'browser-styles', function() {
         var src = options.src && options.src.css || [];
         src.push(paths.browser.src + paths.browser.styles);
-        gulp.src(src)
+        gulp.src(src, { base: paths.browser.src })
             .pipe(sourcemaps.init())
                 .pipe(gulpif(/.less$/, less(lessOptions).on('error', logAndNotify('Less failed'))))
                 .pipe(concat(pkg.name + /* '-' + pkg.version +*/ '.css'))
-            .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' }))
+            .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
             .pipe(gulp.dest(paths.browser.dist));
     });
 
@@ -224,7 +225,7 @@ module.exports = function(pkg, gulp, options) {
 
     if (paths.server) {
         gulp.task(options.prefix + 'server-lintjs', function() {
-            return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ])
+            return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ], { base: paths.browser.src })
                 .pipe(insert.prepend("\"use strict\";\n"))
                 .pipe(jshint(options.jshintServerOptions))
                 .pipe(jshintReporter())
@@ -242,7 +243,7 @@ module.exports = function(pkg, gulp, options) {
         });
         src.push.apply(src, mainscripts);
 
-        return gulp.src(src)
+        return gulp.src(src, { base: paths.browser.src })
             .pipe(through2.obj(function(file, encoding, next) {
                 //TODO fix that !!!!
                 file.on = function(e, c){
@@ -252,7 +253,7 @@ module.exports = function(pkg, gulp, options) {
                     else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
                     else throw new Error(e);
                 };
-                if (mainscripts.indexOf(file.path.substr(file.cwd.length  + 1 )) !== -1) {
+                if (paths.browser.mainscripts.indexOf(file.relative) !== -1) {
                     var bundle = browserify()
                         .add(es6ify.runtime)
                         .transform(es6ify)
@@ -303,7 +304,7 @@ module.exports = function(pkg, gulp, options) {
 
     if (paths.server) {
         gulp.task(options.prefix + 'server-buildjs', function() {
-            return gulp.src(paths.server.src + paths.server.scripts)
+            return gulp.src(paths.server.src + paths.server.scripts, { base: paths.server.src })
                 .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
@@ -312,7 +313,7 @@ module.exports = function(pkg, gulp, options) {
     /* Browser Templates */
 
     gulp.task(options.prefix + 'browser-ejs', function() {
-        return gulp.src(paths.browser.src + paths.browser.templatesEJS)
+        return gulp.src(paths.browser.src + paths.browser.templatesEJS, { base: paths.browser.src })
             .pipe(ejs({ compileDebug: true, client: true }).on('error', logAndNotify('EJS compile failed')))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.js'))
             .pipe(insert.prepend('window.templates = {};'+"\n"))
@@ -332,13 +333,13 @@ module.exports = function(pkg, gulp, options) {
 
     if (paths.server) {
         gulp.task(options.prefix + 'server-ejs', function() {
-            return gulp.src(paths.server.src + paths.server.templatesEJS)
+            return gulp.src(paths.server.src + paths.server.templatesEJS, { base: paths.server.src })
                 //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
 
         gulp.task(options.prefix + 'server-ejsmin', function() {
-            return gulp.src(paths.server.src + paths.server.templatesEJS)
+            return gulp.src(paths.server.src + paths.server.templatesEJS, { base: paths.server.src })
                 //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('server EJS compile failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
@@ -348,7 +349,7 @@ module.exports = function(pkg, gulp, options) {
     /* Images */
 
     gulp.task(options.prefix + 'browser-images', function() {
-        return gulp.src(paths.browser.src + paths.browser.images)
+        return gulp.src(paths.browser.src + paths.browser.images, { base: paths.browser.src })
             //.pipe(notify("Image: <%= file.relative %>"))
             .pipe(gulp.dest(paths['public'] + 'images/'));
     });
