@@ -1,4 +1,34 @@
+var es6transpiler = require('gulp-traceur');
+
+var argv = require('minimist')(process.argv.slice(2), {
+    alias: {
+        'production': 'prod'
+    }
+});
+
+if (argv.port) {
+    console.warn('--port is deprecated, use --startport now');
+    argv.startport = argv.port;
+}
+var startport;
+
+var init = function(gulp) {
+    init = function() {};
+    gulp.task('define-port', function(done) {
+        if (startport) {
+            return;
+        }
+        var portscanner = require('portscanner');
+        startport = argv.startport || 3000;
+        portscanner.findAPortNotInUse(startport, startport + 50, '127.0.0.1', function(error, port) {
+            startport = port;
+            done();
+        });
+    });
+};
+
 module.exports = function(pkg, gulp, options) {
+    init(gulp);
     var S = require('springbokjs-utils');
     var objectUtils = require('springbokjs-utils/object');
     /*var concat = (function(){
@@ -29,16 +59,9 @@ module.exports = function(pkg, gulp, options) {
     var recess = require('gulp-recess');
     var rename = require('gulp-rename');
     var sourcemaps = require('gulp-sourcemaps');
-    //var es6transpiler = require('gulp-traceur');
-    var es6transpiler = require('gulp-es6-transpiler');
+    //var es6transpiler = require('gulp-es6-transpiler');
     var uglify = require('gulp-uglify');
     //var notify = require('gulp-notify');
-
-    var argv = require('minimist')(process.argv.slice(2), {
-        alias: {
-            'production': 'prod'
-        }
-    });
 
     var Notification = require("node-notifier");
     var notifier = new Notification();
@@ -123,7 +146,7 @@ module.exports = function(pkg, gulp, options) {
     }
 
     gulp.task(options.prefix + 'browser-styles', function() {
-        var src = options.src.css || [];
+        var src = options.src && options.src.css || [];
         src.push(paths.browser.src + paths.browser.styles);
         gulp.src(src)
             .pipe(sourcemaps.init())
@@ -213,7 +236,7 @@ module.exports = function(pkg, gulp, options) {
     /* Browser scripts */
 
     gulp.task(options.prefix + 'browserifyjs', function() {
-        var src = options.src.js || [];
+        var src = options.src && options.src.js || [];
         var mainscripts = paths.browser.mainscripts.map(function(mainscript){
             return paths.browser.src + mainscript;
         });
@@ -372,26 +395,7 @@ module.exports = function(pkg, gulp, options) {
 
     /* Watcher */
 
-    if (argv.port) {
-        console.warn('--port is deprecated, use --startport now');
-        argv.startport = argv.port;
-    }
-    var port = argv.startport || 3000;
-    var livereloadPort = argv.startlivereloadPort || (port + 100);
-
-    if (paths.server) {
-        var daemon = require('springbokjs-daemon').node([
-            '--harmony', paths.server.dist + paths.server.startfile,
-            '--port=' + port,
-            '--livereloadPort=' + livereloadPort
-        ]);
-
-        process.on('exit', function(code) {
-            daemon.stop();
-        });
-    }
-
-    gulp.task(options.prefix + 'watch', [options.prefix + 'default'], function() {
+    gulp.task(options.prefix + 'watch', ['define-port', options.prefix + 'default'], function() {
         var livereloadServer = livereload(livereloadPort);
         var logfileChanged = function(from) {
             return function(file) {
@@ -399,6 +403,21 @@ module.exports = function(pkg, gulp, options) {
             }
         };
 
+        var port = startport + (options.multiIndex || 0);
+        var livereloadPort = argv.startlivereloadPort || (port + 100);
+
+        if (paths.server) {
+
+            var daemon = require('springbokjs-daemon').node([
+                '--harmony', paths.server.dist + paths.server.startfile,
+                '--port=' + port,
+                '--livereloadPort=' + livereloadPort
+            ]);
+
+            process.on('exit', function(code) {
+                daemon.stop();
+            });
+        }
 
         gulp.watch(paths.browser.src + paths.browser.scripts,[options.prefix + 'browser-js'])
             .on('change', logfileChanged('paths.browser.scripts'));
@@ -471,14 +490,19 @@ module.exports = function(pkg, gulp, options) {
 
 module.exports.multi = function(pkg, gulp, multi) {
     var prefixes = Object.keys(multi);
-    prefixes.forEach(function(prefix) {
+    prefixes.forEach(function(prefix, index) {
         var options = multi[prefix];
-        options.prefix = prefix;
+        options.prefix = prefix + '-';
+        options.multiIndex = index;
         module.exports(pkg, gulp, options);
     });
     ['default', 'watch', 'clean'].forEach(function(task) {
-        gulp.task(task, prefixes.map(function(prefix) {
-            return prefix + task;
-        }));
+        var tasks = prefixes.map(function(prefix) {
+            return prefix + '-' + task;
+        });
+        if (task === 'watch') {
+            tasks.unshift('define-port');
+        }
+        gulp.task(task, tasks);
     });
 };
