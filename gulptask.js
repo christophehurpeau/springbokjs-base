@@ -221,6 +221,14 @@ module.exports = function(pkg, gulp, options) {
 
         return gulp.src(src)
             .pipe(through2.obj(function(file, encoding, next) {
+                //TODO fix that !!!!
+                file.on = function(e, c){
+                    if (e === 'end') process.nextTick(c);
+                    else if (e === 'data') c(file.contents);
+                    else if (e === 'error') ;
+                    else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
+                    else throw new Error(e);
+                };
                 if (mainscripts.indexOf(file.path.substr(file.cwd.length  + 1 )) !== -1) {
                     var bundle = browserify()
                         .add(es6ify.runtime)
