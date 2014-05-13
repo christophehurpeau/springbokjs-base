@@ -7,7 +7,7 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.4.6",
+  "version": "0.4.8",
   "homepage": "springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -37,7 +37,7 @@
     "gulp-rename": "^1.2.0",
     "gulp-size": "^0.3.1",
     "gulp-sourcemaps": "^0.3.1",
-    "gulp-traceur": "git@github.com:christophehurpeau/gulp-traceur.git",
+    "gulp-traceur": "git://github.com/christophehurpeau/gulp-traceur.git",
     "gulp-uglify": "^0.3.0",
     "gulp-util": "^2.2.14",
     "jshint-stylish": "~0.2.0",
