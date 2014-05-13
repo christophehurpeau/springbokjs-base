@@ -422,7 +422,7 @@ module.exports = function(pkg, gulp, options) {
 
         gulp.watch(paths.browser.src + paths.browser.scripts,[options.prefix + 'browser-js'])
             .on('change', logfileChanged('paths.browser.scripts'));
-        gulp.watch([ paths.browser.src + '**/*.less', paths.browser.src + '**/*.css' ], [options.prefix + 'browser-css'])
+        gulp.watch([ paths.browser.src + '**/*.less', paths.browser.src + '**/*.css' ], [options.prefix + 'browser-styles'])
             .on('change', logfileChanged('css&less'));
         gulp.watch(paths.browser.src + paths.browser.templatesEJS, [options.prefix + 'browser-ejs'])
             .on('change', logfileChanged('ejs'));
