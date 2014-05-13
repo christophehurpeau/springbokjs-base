@@ -100,7 +100,7 @@ module.exports = function(pkg, gulp, options) {
             mainscripts: "js/app.js",
             scripts: "**/*.js",
             styles: 'style/main.less',
-            templatesEJS: 'templates/**/*.ejs',
+            templatesEJS: 'templates/',
             images: "images/**/*",
         },
         server: 'src/server/'
@@ -313,7 +313,7 @@ module.exports = function(pkg, gulp, options) {
     /* Browser Templates */
 
     gulp.task(options.prefix + 'browser-ejs', function() {
-        return gulp.src(paths.browser.src + paths.browser.templatesEJS, { base: paths.browser.src })
+        return gulp.src(paths.browser.src + paths.browser.templatesEJS + '**/*.ejs', { base: paths.browser.src + paths.browser.templatesEJS })
             .pipe(ejs({ compileDebug: true, client: true }).on('error', logAndNotify('EJS compile failed')))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.js'))
             .pipe(insert.prepend('window.templates = {};'+"\n"))
@@ -321,7 +321,7 @@ module.exports = function(pkg, gulp, options) {
     });
 
     gulp.task(options.prefix + 'browser-ejsmin', function() {
-        return gulp.src(paths.browser.src + paths.browser.templatesEJS)
+        return gulp.src(paths.browser.src + paths.browser.templatesEJS + '**/*.ejs')
             .pipe(ejs({ compileDebug: false, client: true }).on('error', logAndNotify('EJS compile failed')))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.min.js'))
             .pipe(insert.prepend('window.templates = {};'+"\n"))
@@ -397,7 +397,6 @@ module.exports = function(pkg, gulp, options) {
     /* Watcher */
 
     gulp.task(options.prefix + 'watch', ['define-port', options.prefix + 'default'], function() {
-        var livereloadServer = livereload(livereloadPort);
         var logfileChanged = function(from) {
             return function(file) {
                 console.log('[watch] ' + from + ': ' + file.path);
@@ -406,9 +405,9 @@ module.exports = function(pkg, gulp, options) {
 
         var port = startport + (options.multiIndex || 0);
         var livereloadPort = argv.startlivereloadPort || (port + 100);
+        var livereloadServer = livereload(livereloadPort);
 
         if (paths.server) {
-
             var daemon = require('springbokjs-daemon').node([
                 '--harmony', paths.server.dist + paths.server.startfile,
                 '--port=' + port,
