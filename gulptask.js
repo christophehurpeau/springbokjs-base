@@ -12,7 +12,7 @@ if (argv.port) {
 }
 var startport;
 
-var init = function(gulp) {
+var init = function(gulp, paths) {
     init = function() {};
     gulp.task('define-port', function(done) {
         if (startport) {
@@ -25,10 +25,12 @@ var init = function(gulp) {
             done();
         });
     });
+    /* Import springbokjs-shim task */
+
+    require('springbokjs-shim/gulptask.js')(gulp, paths.browser.dist);
 };
 
 module.exports = function(pkg, gulp, options) {
-    init(gulp);
     var S = require('springbokjs-utils');
     var objectUtils = require('springbokjs-utils/object');
     /*var concat = (function(){
@@ -117,10 +119,8 @@ module.exports = function(pkg, gulp, options) {
 
     options.prefix = options.prefix || '';
 
-
-    /* Import springbokjs-shim task */
-
-    require('springbokjs-shim/gulptask.js')(gulp, paths.browser.dist);
+    /* Init : tasks only applied once */
+    init(gulp, paths);
 
     /* Styles */
 
