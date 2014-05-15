@@ -103,7 +103,7 @@ module.exports = function(pkg, gulp, options) {
             scripts: "**/*.js",
             styles: 'style/main.less',
             templatesEJS: 'templates/',
-            images: "images/**/*",
+            images: "images",
         },
         server: 'src/server/'
     }, options.paths);
@@ -217,7 +217,7 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task(options.prefix + 'browser-lintjs', function() {
         return gulp.src(paths.browser.src + paths.browser.scripts)
-            .pipe(insert.prepend("\"use strict\";\n"))
+            .pipe(insert.prepend("\"use strict\";     "))
             .pipe(jshint(options.jshintBrowserOptions))
             .pipe(jshintReporter())
             .pipe(jshint.reporter('jshint-stylish'));
@@ -349,7 +349,7 @@ module.exports = function(pkg, gulp, options) {
     /* Images */
 
     gulp.task(options.prefix + 'browser-images', function() {
-        return gulp.src(paths.browser.src + paths.browser.images, { base: paths.browser.src })
+        return gulp.src(paths.browser.src + paths.browser.images + '/**/*', { base: paths.browser.src + paths.browser.images })
             //.pipe(notify("Image: <%= file.relative %>"))
             .pipe(gulp.dest(paths['public'] + 'images/'));
     });
@@ -431,7 +431,7 @@ module.exports = function(pkg, gulp, options) {
         if (paths.server) {
             daemon.start();
             gulp.watch(paths.server.src + paths.server.scripts, [options.prefix + 'server-js'])
-                .on('change', logfileChanged('images'));
+                .on('change', logfileChanged('scripts'));
 
             gulp.watch([ paths.server.dist + '**/*' ]).on('change', function(file) {
                 logfileChanged('server')(file);
