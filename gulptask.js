@@ -226,7 +226,7 @@ module.exports = function(pkg, gulp, options) {
     if (paths.server) {
         gulp.task(options.prefix + 'server-lintjs', function() {
             return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ], { base: paths.browser.src })
-                .pipe(insert.prepend("\"use strict\";\n"))
+                .pipe(insert.prepend("\"use strict\";     "))
                 .pipe(jshint(options.jshintServerOptions))
                 .pipe(jshintReporter())
                 .pipe(jshint.reporter('jshint-stylish'));
