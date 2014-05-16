@@ -432,6 +432,9 @@ module.exports = function(pkg, gulp, options) {
             daemon.start();
             gulp.watch(paths.server.src + paths.server.scripts, [options.prefix + 'server-js'])
                 .on('change', logfileChanged('scripts'));
+            gulp.watch(paths.server.src + paths.server.templatesEJS, [options.prefix + 'server-ejs'])
+                .on('change', logfileChanged('templatesEJS'));
+
 
             gulp.watch([ paths.server.dist + '**/*' ]).on('change', function(file) {
                 logfileChanged('server')(file);
