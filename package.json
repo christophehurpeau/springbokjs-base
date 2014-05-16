@@ -7,7 +7,7 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.4.14",
+  "version": "0.4.15",
   "homepage": "springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -21,6 +21,7 @@
     "es6ify": "^1.1.0",
     "express": "^4.2.0",
     "gulp": "^3.6.2",
+    "gulp-changed": "^0.3.0",
     "gulp-closure-compiler": "^0.2.1",
     "gulp-concat": "git://github.com/christophehurpeau/gulp-concat.git#master",
     "gulp-csso": "^0.2.8",

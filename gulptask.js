@@ -49,6 +49,7 @@ module.exports = function(pkg, gulp, options) {
     var es6ify = require('es6ify');
     var exec = require('child_process').exec;
 
+    var changed = require('gulp-changed');
     var concat = require('gulp-concat');
     var csso = require('gulp-csso');
     var ejs = require('gulp-ejs-precompiler');
@@ -305,6 +306,7 @@ module.exports = function(pkg, gulp, options) {
     if (paths.server) {
         gulp.task(options.prefix + 'server-buildjs', function() {
             return gulp.src(paths.server.src + paths.server.scripts, { base: paths.server.src })
+                .pipe(changed(paths.server.dist))
                 .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
@@ -334,6 +336,7 @@ module.exports = function(pkg, gulp, options) {
     if (paths.server) {
         gulp.task(options.prefix + 'server-ejs', function() {
             return gulp.src(paths.server.src + paths.server.templatesEJS, { base: paths.server.src })
+                //.pipe(changed(paths.server.dist))
                 //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
