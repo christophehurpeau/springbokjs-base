@@ -3,6 +3,8 @@ var es6transpiler = require('gulp-traceur');
 var exec = require('child_process').exec;
 var through2 = require('through2');
 var gutil = require('gulp-util');
+var eventStream = require('event-stream');
+var path = require('path');
 
 var argv = require('minimist')(process.argv.slice(2), {
     alias: {
@@ -99,17 +101,19 @@ module.exports = function(pkg, gulp, options) {
 
     var paths = objectUtils.extend({
         'public': 'public/',
-        browser: {
-            src: 'src/browser/',
-            dist: 'public/dist/',
-            mainscripts: "js/app.js",
-            scripts: "**/*.js",
-            styles: 'style/main.less',
-            templatesEJS: 'templates/',
-            images: "images",
-        },
+        browser: {},
         server: 'src/server/'
     }, options.paths);
+    paths.browser = objectUtils.extend({
+        src: 'src/browser/',
+        dist: 'public/dist/',
+        mainscripts: "js/app.js",
+        scripts: "**/*.js",
+        styles: 'style/main.less',
+        templatesEJS: 'templates/',
+        images: "images",
+    }, paths.browser);
+
     if (!Array.isArray(paths.browser.mainscripts)) {
         paths.browser.mainscripts = [ paths.browser.mainscripts ];
     }
@@ -243,56 +247,66 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task(options.prefix + 'browserifyjs', function() {
         var src = options.src && options.src.js || [];
-        var mainscripts = paths.browser.mainscripts.map(function(mainscript){
-            return paths.browser.src + mainscript;
-        });
-        src.push.apply(src, mainscripts);
+        if (Array.isArray(src)) {
+            if (paths.browser.mainscripts.length > 1) {
+                gutil.log(gutil.colors.red.bold('the configuration array options.src.js should be defined for each of yours mainscripts'));
+            }
+            var oldSrc = src;
+            src = {};
+            src[paths.browser.mainscripts[0]] = oldSrc;
+        }
 
-        return gulp.src(src, { base: paths.browser.src })
-            .pipe(through2.obj(function(file, encoding, next) {
-                //TODO fix that !!!!
-                file.on = function(e, c){
-                    if (e === 'end') process.nextTick(c);
-                    else if (e === 'data') c(file.contents);
-                    else if (e === 'error') ;
-                    else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
-                    else throw new Error(e);
-                };
-                if (paths.browser.mainscripts.indexOf(file.relative) !== -1) {
-                    var bundle = browserify()
-                        .add(es6ify.runtime)
-                        .transform(es6ify)
-                        .require(file, { entry: file.path, basedir: file.base });
-                    if (options.browserify && options.browserify.beforeBundle) {
-                        options.browserify.beforeBundle(bundle);
+        return eventStream.merge.apply(eventStream, paths.browser.mainscripts.map(function(mainscript) {
+            var currentSrc = src[mainscript] || [];
+            currentSrc.push(paths.browser.src + mainscript);
+
+            return gulp.src(currentSrc, { base: paths.browser.src })
+                .pipe(through2.obj(function(file, encoding, next) {
+                    //TODO fix that !!!!
+                    file.on = function(e, c){
+                        if (e === 'end') process.nextTick(c);
+                        else if (e === 'data') c(file.contents);
+                        else if (e === 'error') ;
+                        else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
+                        else throw new Error(e);
+                    };
+                    if (file.relative === mainscript) {
+                        var bundle = browserify()
+                            .add(es6ify.runtime)
+                            .transform(es6ify)
+                            .require(file, { entry: file.path, basedir: file.base });
+                        if (options.browserify && options.browserify[mainscript]
+                                     && options.browserify[mainscript].beforeBundle) {
+                            options.browserify[mainscript].beforeBundle(bundle);
+                        }
+                        bundle
+                            .bundle({ debug: !argv.production }, function(err, source) {
+                                if (err) {
+                                    this.emit('error', new gutil.PluginError('task browserifyjs', err));
+                                    return next();
+                                }
+                                file.contents = new Buffer(source);
+                                this.push(file);
+                                next();
+                            }.bind(this));
+                    } else {
+                        this.push(file);
+                        next();
                     }
-                    bundle
-                        .bundle({ debug: !argv.production }, function(err, source) {
-                            if (err) {
-                                this.emit('error', new gutil.PluginError('task browserifyjs', err));
-                                return next();
-                            }
-                            file.contents = new Buffer(source);
-                            this.push(file);
-                            next();
-                        }.bind(this));
-                } else {
-                    this.push(file);
-                    next();
-                }
-            }).on('error', logAndNotify('browserify failed')))
-            //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
-            .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.js'))
-            .pipe(insert.prepend('var basepath = ' + JSON.stringify(argv.basepath || '/') + ";\n"))
-            //.pipe(es6transpiler({ modules: 'register' }))
-            // TODO : merge source maps
-            .pipe(uglify({
-                //outSourceMap: true,
-                mangle: false,
-                compress: false,
-                output: { beautify: true },
-            }))
-            .pipe(gulp.dest(paths.browser.dist));
+                }).on('error', logAndNotify('browserify failed')))
+                //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
+                .pipe(concat(path.basename(mainscript).slice(0, -3) + /*'-' + pkg.version +*/ '.js'))
+                .pipe(insert.prepend('var basepath = ' + JSON.stringify(argv.basepath || '/') + ";\n"))
+                //.pipe(es6transpiler({ modules: 'register' }))
+                // TODO : merge source maps
+                .pipe(uglify({
+                    //outSourceMap: true,
+                    mangle: false,
+                    compress: false,
+                    output: { beautify: true },
+                }))
+                .pipe(gulp.dest(paths.browser.dist))
+        }));
     });
 
     gulp.task(options.prefix + 'jsmin', [options.prefix + 'browserifyjs'], function() {

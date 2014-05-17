@@ -7,7 +7,7 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.4.16",
+  "version": "0.5.0",
   "homepage": "springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -19,6 +19,7 @@
     "browserify": "^4.1.4",
     "connect-livereload": "^0.4.0",
     "es6ify": "^1.1.0",
+    "event-stream": "^3.1.5",
     "express": "^4.2.0",
     "gulp": "^3.6.2",
     "gulp-changed": "^0.3.0",
