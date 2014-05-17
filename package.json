@@ -7,7 +7,7 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.4.15",
+  "version": "0.4.16",
   "homepage": "springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -16,7 +16,7 @@
     "url": "https://github.com/christophehurpeau/springbokjs-base.git"
   },
   "dependencies": {
-    "browserify": "^4.1.2",
+    "browserify": "^4.1.4",
     "connect-livereload": "^0.4.0",
     "es6ify": "^1.1.0",
     "express": "^4.2.0",
@@ -30,7 +30,7 @@
     "gulp-filesize": "0.0.6",
     "gulp-if": "1.2.0",
     "gulp-insert": "^0.3.0",
-    "gulp-jshint": "^1.5.5",
+    "gulp-jshint": "^1.6.1",
     "gulp-less": "git://github.com/christophehurpeau/gulp-less.git#master",
     "gulp-livereload": "^1.5.0",
     "gulp-notify": "^1.2.5",
@@ -45,7 +45,7 @@
     "minimist": "0.1.0",
     "node-notifier": "^2.0.4",
     "portscanner": "^0.2.3",
-    "springbokjs-daemon": "^0.1.1",
+    "springbokjs-daemon": "^0.1.2",
     "springbokjs-shim": "^0.1.15",
     "springbokjs-utils": "^0.3",
     "through2": "^0.4.1"

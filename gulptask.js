@@ -1,5 +1,9 @@
 var es6transpiler = require('gulp-traceur');
 
+var exec = require('child_process').exec;
+var through2 = require('through2');
+var gutil = require('gulp-util');
+
 var argv = require('minimist')(process.argv.slice(2), {
     alias: {
         'production': 'prod'
@@ -43,11 +47,9 @@ module.exports = function(pkg, gulp, options) {
             return concat(filename, options);
         };
     })();*/
-    var through2 = require('through2');
-    var gutil = require('gulp-util');
+
     var browserify = require('browserify');
     var es6ify = require('es6ify');
-    var exec = require('child_process').exec;
 
     var changed = require('gulp-changed');
     var concat = require('gulp-concat');
@@ -189,6 +191,8 @@ module.exports = function(pkg, gulp, options) {
                 previousLintJsSuccess = true;
                 gutil.log(gutil.colors.green('✔'), 'jshint');
             }
+            // reset for next time
+            jshintReported = false;
             onEnd();
         });
     };
