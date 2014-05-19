@@ -140,7 +140,6 @@ module.exports = function(pkg, gulp, options) {
         modifyVars: {
             production: !!argv.production
         },
-        sourceMapRootpath: paths.browser.src
     };
     if (paths.browser.independantStyles) {
         gulp.task(options.prefix + 'browser-independant-styles', function() {
@@ -234,7 +233,7 @@ module.exports = function(pkg, gulp, options) {
 
     if (paths.server) {
         gulp.task(options.prefix + 'server-lintjs', function() {
-            return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ], { base: paths.browser.src })
+            return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ], { base: paths.server.src })
                 .pipe(insert.prepend("\"use strict\";     "))
                 .pipe(jshint(options.jshintServerOptions))
                 .pipe(jshintReporter())
