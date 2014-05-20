@@ -107,7 +107,7 @@ module.exports = function(pkg, gulp, options) {
     paths.browser = objectUtils.extend({
         src: 'src/browser/',
         dist: 'public/dist/',
-        mainscripts: "js/app.js",
+        mainscripts: "js/" + pkg.name + ".js",
         scripts: "**/*.js",
         styles: 'style/main.less',
         templatesEJS: 'templates/',
