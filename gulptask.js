@@ -100,15 +100,19 @@ module.exports = function(pkg, gulp, options) {
     /* OPTIONS */
 
     var paths = objectUtils.extend({
+        scripts: "**/*.js",
         'public': 'public/',
         browser: {},
-        server: 'src/server/'
+        server: 'src/server/',
+        common: {
+            src: 'src/common/',
+            dest: 'lib/common/', // destination for server-side.
+        },
     }, options.paths);
     paths.browser = objectUtils.extend({
         src: 'src/browser/',
         dist: 'public/dist/',
         mainscripts: "js/" + pkg.name + ".js",
-        scripts: "**/*.js",
         styles: 'style/main.less',
         templatesEJS: 'templates/',
         images: "images",
@@ -119,7 +123,6 @@ module.exports = function(pkg, gulp, options) {
     }
     paths.server = paths.server !== false && objectUtils.extend({
         dist: 'lib/server/',
-        scripts: '**/*.js',
         startfile: 'server.js',
         templatesEJS: '**/*.ejs'
     }, S.isString(paths.server) ? { src: paths.server } : paths.server);
@@ -222,9 +225,10 @@ module.exports = function(pkg, gulp, options) {
     }, options.jshintOptions);
     options.jshintBrowserOptions = objectUtils.mextend(options.jshintBrowserOptions || {}, {"browser": true}, jshintOptions);
     options.jshintServerOptions = objectUtils.extend(options.jshintServerOptions || {}, jshintOptions);
+    console.log(options.prefix, options.jshintServerOptions);
 
     gulp.task(options.prefix + 'browser-lintjs', function() {
-        return gulp.src(paths.browser.src + paths.browser.scripts)
+        return gulp.src([paths.browser.src + paths.scripts, paths.common.src + paths.scripts, ])
             .pipe(insert.prepend("\"use strict\";     "))
             .pipe(jshint(options.jshintBrowserOptions))
             .pipe(jshintReporter())
@@ -233,7 +237,7 @@ module.exports = function(pkg, gulp, options) {
 
     if (paths.server) {
         gulp.task(options.prefix + 'server-lintjs', function() {
-            return gulp.src([ 'gulpfile.js', paths.server.src + paths.server.scripts ], { base: paths.server.src })
+            return gulp.src([ 'gulpfile.js', paths.server.src + paths.scripts, paths.common.src + paths.scripts ], { base: paths.server.src })
                 .pipe(insert.prepend("\"use strict\";     "))
                 .pipe(jshint(options.jshintServerOptions))
                 .pipe(jshintReporter())
@@ -322,11 +326,19 @@ module.exports = function(pkg, gulp, options) {
 
     if (paths.server) {
         gulp.task(options.prefix + 'server-buildjs', function() {
-            return gulp.src(paths.server.src + paths.server.scripts, { base: paths.server.src })
+            return gulp.src(paths.server.src + paths.scripts, { base: paths.server.src })
                 .pipe(changed(paths.server.dist))
                 .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
+
+        gulp.task(options.prefix + 'server-common-js', function() {
+            return gulp.src(paths.common.src + paths.scripts, { base: paths.common.src })
+                .pipe(changed(paths.common.dest))
+                .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
+                .pipe(gulp.dest(paths.common.dest));
+        });
+        
     }
 
     /* Browser Templates */
@@ -399,7 +411,8 @@ module.exports = function(pkg, gulp, options) {
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
             options.prefix + 'server-js',
-            options.prefix + 'server-ejs'
+            options.prefix + 'server-common-js',
+            options.prefix + 'server-ejs',
         ]);
     }
     gulp.task(options.prefix + 'default', tasksDefault);
@@ -439,8 +452,8 @@ module.exports = function(pkg, gulp, options) {
             });
         }
 
-        gulp.watch(paths.browser.src + paths.browser.scripts,[options.prefix + 'browser-js'])
-            .on('change', logfileChanged('paths.browser.scripts'));
+        gulp.watch(paths.browser.src + paths.scripts,[options.prefix + 'browser-js'])
+            .on('change', logfileChanged('browser.scripts'));
         gulp.watch([ paths.browser.src + '**/*.less', paths.browser.src + '**/*.css' ], [options.prefix + 'browser-styles'])
             .on('change', logfileChanged('css&less'));
         gulp.watch(paths.browser.src + paths.browser.templatesEJS, [options.prefix + 'browser-ejs'])
@@ -450,13 +463,15 @@ module.exports = function(pkg, gulp, options) {
 
         if (paths.server) {
             daemon.start();
-            gulp.watch(paths.server.src + paths.server.scripts, [options.prefix + 'server-js'])
-                .on('change', logfileChanged('scripts'));
+            gulp.watch(paths.server.src + paths.scripts, [options.prefix + 'server-js'])
+                .on('change', logfileChanged('server.scripts'));
             gulp.watch(paths.server.src + paths.server.templatesEJS, [options.prefix + 'server-ejs'])
                 .on('change', logfileChanged('templatesEJS'));
 
+            gulp.watch(paths.common.src + paths.scripts, [options.prefix + 'server-common-js'])
+                .on('change', logfileChanged('common.scripts'));
 
-            gulp.watch([ paths.server.dist + '**/*' ]).on('change', function(file) {
+            gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
                 logfileChanged('server')(file);
                 daemon.restart();
                 daemon.once('stdout', function(data) {
