@@ -225,7 +225,6 @@ module.exports = function(pkg, gulp, options) {
     }, options.jshintOptions);
     options.jshintBrowserOptions = objectUtils.mextend(options.jshintBrowserOptions || {}, {"browser": true}, jshintOptions);
     options.jshintServerOptions = objectUtils.extend(options.jshintServerOptions || {}, jshintOptions);
-    console.log(options.prefix, options.jshintServerOptions);
 
     gulp.task(options.prefix + 'browser-lintjs', function() {
         return gulp.src([paths.browser.src + paths.scripts, paths.common.src + paths.scripts, ])
