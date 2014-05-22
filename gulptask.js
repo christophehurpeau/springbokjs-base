@@ -1,10 +1,13 @@
 var es6transpiler = require('gulp-traceur');
 
 var exec = require('child_process').exec;
+var path = require('path');
 var through2 = require('through2');
 var gutil = require('gulp-util');
 var eventStream = require('event-stream');
 var path = require('path');
+var convertSourceMap = require('convert-source-map');
+var applySourceMap = require('vinyl-sourcemaps-apply');
 
 var argv = require('minimist')(process.argv.slice(2), {
     alias: {
@@ -39,16 +42,6 @@ var init = function(gulp, paths) {
 module.exports = function(pkg, gulp, options) {
     var S = require('springbokjs-utils');
     var objectUtils = require('springbokjs-utils/object');
-    /*var concat = (function(){
-        var concat = require('gulp-concat-sourcemap');
-        return function(filename, options) {
-            options = options || {};
-            if (!options.sourceRoot) {
-                options.sourceRoot = '../';
-            }
-            return concat(filename, options);
-        };
-    })();*/
 
     var browserify = require('browserify');
     var es6ify = require('es6ify');
@@ -204,7 +197,7 @@ module.exports = function(pkg, gulp, options) {
     };
 
     var jshintOptions = objectUtils.extend({
-        "globalstrict": true, // because browserify encapsule them in functions
+        //"globalstrict": true, // because browserify encapsule them in functions
         "esnext": true,
         "camelcase": true,
         "curly": true,
@@ -228,7 +221,7 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task(options.prefix + 'browser-lintjs', function() {
         return gulp.src([paths.browser.src + paths.scripts, paths.common.src + paths.scripts, ])
-            .pipe(insert.prepend("\"use strict\";     "))
+            //.pipe(insert.prepend("\"use strict\";     "))
             .pipe(jshint(options.jshintBrowserOptions))
             .pipe(jshintReporter())
             .pipe(jshint.reporter('jshint-stylish'));
@@ -237,7 +230,7 @@ module.exports = function(pkg, gulp, options) {
     if (paths.server) {
         gulp.task(options.prefix + 'server-lintjs', function() {
             return gulp.src([ 'gulpfile.js', paths.server.src + paths.scripts, paths.common.src + paths.scripts ], { base: paths.server.src })
-                .pipe(insert.prepend("\"use strict\";     "))
+                //.pipe(insert.prepend("\"use strict\";     "))
                 .pipe(jshint(options.jshintServerOptions))
                 .pipe(jshintReporter())
                 .pipe(jshint.reporter('jshint-stylish'));
@@ -263,50 +256,61 @@ module.exports = function(pkg, gulp, options) {
             currentSrc.push(paths.browser.src + mainscript);
 
             return gulp.src(currentSrc, { base: paths.browser.src })
-                .pipe(through2.obj(function(file, encoding, next) {
-                    //TODO fix that !!!!
-                    file.on = function(e, c){
-                        if (e === 'end') process.nextTick(c);
-                        else if (e === 'data') c(file.contents);
-                        else if (e === 'error') ;
-                        else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
-                        else throw new Error(e);
-                    };
-                    if (file.relative === mainscript) {
-                        var bundle = browserify()
-                            .add(es6ify.runtime)
-                            .transform(es6ify)
-                            .require(file, { entry: file.path, basedir: file.base });
-                        if (options.browserify && options.browserify[mainscript]
-                                     && options.browserify[mainscript].beforeBundle) {
-                            options.browserify[mainscript].beforeBundle(bundle);
+                .pipe(sourcemaps.init())
+                    .pipe(through2.obj(function(file, encoding, next) {
+                        //TODO fix that !!!!
+                        file.on = function(e, c){
+                            if (e === 'end') process.nextTick(c);
+                            else if (e === 'data') c(file.contents);
+                            else if (e === 'error') ;
+                            else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
+                            else throw new Error(e);
+                        };
+                        if (file.relative === mainscript) {
+                            var bundle = browserify()
+                                .add(es6ify.runtime)
+                                .transform(es6ify)
+                                .require(file, { entry: file.path, basedir: file.base });
+                            if (options.browserify && options.browserify[mainscript]
+                                         && options.browserify[mainscript].beforeBundle) {
+                                options.browserify[mainscript].beforeBundle(bundle);
+                            }
+                            bundle
+                                .bundle({ debug: true }, function(err, source) {
+                                    if (err) {
+                                        this.emit('error', new gutil.PluginError('task browserifyjs', err));
+                                        return next();
+                                    }
+                                    ////# sourceMappingURL=data:application/json;base64,
+                                    var m = /^[ \t]*(?:\/\/|\/\*)[@#][ \t]+sourceMappingURL=data:(?:application|text)\/json;base64,(.+)(?:\*\/)?/mg.exec(source);
+
+                                    var sourceMapContent = m && m[1];
+                                    if (sourceMapContent) {
+                                        sourceMapContent = new Buffer(sourceMapContent, 'base64').toString();
+                                        var sourceMap = JSON.parse(sourceMapContent);
+                                        sourceMap.sources = sourceMap.sources.map(function(filePath) {
+                                            return path.relative(file.cwd + '/' + file.base, filePath);
+                                        });
+                                        applySourceMap(file, sourceMap);
+                                    }
+                                    file.contents = new Buffer(source);
+                                    this.push(file);
+                                    next();
+                                }.bind(this));
+                        } else {
+                            this.push(file);
+                            next();
                         }
-                        bundle
-                            .bundle({ debug: !argv.production }, function(err, source) {
-                                if (err) {
-                                    this.emit('error', new gutil.PluginError('task browserifyjs', err));
-                                    return next();
-                                }
-                                file.contents = new Buffer(source);
-                                this.push(file);
-                                next();
-                            }.bind(this));
-                    } else {
-                        this.push(file);
-                        next();
-                    }
-                }).on('error', logAndNotify('browserify failed')))
-                //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
-                .pipe(concat(path.basename(mainscript).slice(0, -3) + /*'-' + pkg.version +*/ '.js'))
-                .pipe(insert.prepend('var basepath = ' + JSON.stringify(argv.basepath || '/') + ";\n"))
-                //.pipe(es6transpiler({ modules: 'register' }))
-                // TODO : merge source maps
-                .pipe(uglify({
-                    //outSourceMap: true,
-                    mangle: false,
-                    compress: false,
-                    output: { beautify: true },
-                }))
+                    }).on('error', logAndNotify('browserify failed')))
+                    //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
+                    .pipe(concat(path.basename(mainscript).slice(0, -3) + /*'-' + pkg.version +*/ '.js'))
+                    .pipe(insert.prepend('var basepath = ' + JSON.stringify(argv.basepath || '/') + ";\n"))
+                    .pipe(uglify({
+                        mangle: false,
+                        compress: !!argv.production,
+                        //output: { beautify: true },
+                    }))
+                .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
                 .pipe(gulp.dest(paths.browser.dist))
         }));
     });
