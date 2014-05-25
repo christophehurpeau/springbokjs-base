@@ -6,8 +6,32 @@ var through2 = require('through2');
 var gutil = require('gulp-util');
 var eventStream = require('event-stream');
 var path = require('path');
+var S = require('springbokjs-utils');
+var objectUtils = require('springbokjs-utils/object');
+var fs = require('springbokjs-utils/fs');
 var convertSourceMap = require('convert-source-map');
 var applySourceMap = require('vinyl-sourcemaps-apply');
+
+var browserify = require('browserify');
+var es6ify = require('es6ify');
+
+var changed = require('gulp-changed');
+var concat = require('gulp-concat');
+var csso = require('gulp-csso');
+var ejs = require('gulp-ejs-precompiler');
+var filesize = require('gulp-filesize');
+var gulpif = require('gulp-if');
+var insert = require('gulp-insert');
+var jshint = require('gulp-jshint');
+var less = require('gulp-less');
+var livereload = require('gulp-livereload');
+var recess = require('gulp-recess');
+var rename = require('gulp-rename');
+var sourcemaps = require('gulp-sourcemaps');
+//var es6transpiler = require('gulp-es6-transpiler');
+var uglify = require('gulp-uglify');
+//var notify = require('gulp-notify');
+var Notification = require("node-notifier");
 
 var argv = require('minimist')(process.argv.slice(2), {
     alias: {
@@ -21,6 +45,7 @@ if (argv.port) {
 }
 var startport;
 
+var browserConfig, serverConfig;
 var init = function(gulp, paths) {
     init = function() {};
     gulp.task('define-port', function(done) {
@@ -37,33 +62,38 @@ var init = function(gulp, paths) {
     /* Import springbokjs-shim task */
 
     require('springbokjs-shim/gulptask.js')(gulp, paths.browser.dist);
+
+    /* Config */
+    gulp.task('init-config', function(done) {
+        if (!argv.env) {
+            return done();
+        }
+        Promise.all([
+            fs.readYamlFile(paths.config + argv.env + '.yml'),
+            fs.readYamlFile(paths.config + 'common.yml'),
+        ]).then(function(results) {
+            var config = objectUtils.extend(results[1] || {}, results[0]);
+            browserConfig = objectUtils.mextend({
+                basepath: '/',
+            }, config.common, config.browser, {
+                production: !!argv.production,
+            });
+            serverConfig = objectUtils.extend(config.common || {}, config.server);
+            return fs.writeFile(paths.server.configdest + 'config.js',
+             'module.exports = ' + JSON.stringify(serverConfig, null, 4));
+        })
+        .then(function() {
+            done();
+        })
+        .catch(function(err) {
+            console.error(err);
+            done(err);
+        });
+    });
 };
 
 module.exports = function(pkg, gulp, options) {
-    var S = require('springbokjs-utils');
-    var objectUtils = require('springbokjs-utils/object');
 
-    var browserify = require('browserify');
-    var es6ify = require('es6ify');
-
-    var changed = require('gulp-changed');
-    var concat = require('gulp-concat');
-    var csso = require('gulp-csso');
-    var ejs = require('gulp-ejs-precompiler');
-    var filesize = require('gulp-filesize');
-    var gulpif = require('gulp-if');
-    var insert = require('gulp-insert');
-    var jshint = require('gulp-jshint');
-    var less = require('gulp-less');
-    var livereload = require('gulp-livereload');
-    var recess = require('gulp-recess');
-    var rename = require('gulp-rename');
-    var sourcemaps = require('gulp-sourcemaps');
-    //var es6transpiler = require('gulp-es6-transpiler');
-    var uglify = require('gulp-uglify');
-    //var notify = require('gulp-notify');
-
-    var Notification = require("node-notifier");
     var notifier = new Notification();
     var _notify = function(title, message) {
         notifier.notify({
@@ -97,6 +127,7 @@ module.exports = function(pkg, gulp, options) {
         'public': 'public/',
         browser: {},
         server: 'src/server/',
+        config: 'src/config/',
         common: {
             src: 'src/common/',
             dest: 'lib/common/', // destination for server-side.
@@ -117,7 +148,8 @@ module.exports = function(pkg, gulp, options) {
     paths.server = paths.server !== false && objectUtils.extend({
         dist: 'lib/server/',
         startfile: 'server.js',
-        templatesEJS: '**/*.ejs'
+        templatesEJS: '**/*.ejs',
+        configdest: 'lib/'
     }, S.isString(paths.server) ? { src: paths.server } : paths.server);
 
     options.prefix = options.prefix || '';
@@ -237,10 +269,9 @@ module.exports = function(pkg, gulp, options) {
         });
     }
 
-
     /* Browser scripts */
 
-    gulp.task(options.prefix + 'browserifyjs', function() {
+    gulp.task(options.prefix + 'browserifyjs', ['init-config'], function() {
         var src = options.src && options.src.js || [];
         if (Array.isArray(src)) {
             if (paths.browser.mainscripts.length > 1) {
@@ -254,6 +285,7 @@ module.exports = function(pkg, gulp, options) {
         return eventStream.merge.apply(eventStream, paths.browser.mainscripts.map(function(mainscript) {
             var currentSrc = src[mainscript] || [];
             currentSrc.push(paths.browser.src + mainscript);
+            currentSrc.unshift('node_modules/springbokjs-base/src/init.js');
 
             return gulp.src(currentSrc, { base: paths.browser.src })
                 .pipe(sourcemaps.init())
@@ -304,11 +336,16 @@ module.exports = function(pkg, gulp, options) {
                     }).on('error', logAndNotify('browserify failed')))
                     //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
                     .pipe(concat(path.basename(mainscript).slice(0, -3) + /*'-' + pkg.version +*/ '.js'))
-                    .pipe(insert.prepend('var basepath = ' + JSON.stringify(argv.basepath || '/') + ";\n"))
                     .pipe(uglify({
                         mangle: false,
-                        compress: !!argv.production,
-                        //output: { beautify: true },
+                        compress: {
+                            warnings: false,
+                            global_defs: browserConfig,
+                            unsafe: false, //!oldIe
+                            comparisons: true,
+                            sequences: false
+                        },
+                        output: { beautify: !!argv.production },
                     }))
                 .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
                 .pipe(gulp.dest(paths.browser.dist))
@@ -411,6 +448,9 @@ module.exports = function(pkg, gulp, options) {
     if (paths.browser.independantStyles) {
         tasksDefault.push(options.prefix + 'browser-independant-styles');
     }
+    if (argv.env) {
+        tasksDefault.unshift('init-config')
+    }
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
             options.prefix + 'server-js',
@@ -432,7 +472,7 @@ module.exports = function(pkg, gulp, options) {
 
     /* Watcher */
 
-    gulp.task(options.prefix + 'watch', ['define-port', options.prefix + 'default'], function() {
+    gulp.task(options.prefix + 'watch', ['define-port', 'init-config', options.prefix + 'default'], function() {
         var logfileChanged = function(from) {
             return function(file) {
                 console.log('[watch] ' + from + ': ' + file.path);
