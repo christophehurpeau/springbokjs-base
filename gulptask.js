@@ -9,7 +9,6 @@ var path = require('path');
 var S = require('springbokjs-utils');
 var objectUtils = require('springbokjs-utils/object');
 var fs = require('springbokjs-utils/fs');
-var convertSourceMap = require('convert-source-map');
 var applySourceMap = require('vinyl-sourcemaps-apply');
 
 var browserify = require('browserify');
