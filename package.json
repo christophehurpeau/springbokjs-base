@@ -1,5 +1,5 @@
 {
-  "name": "springbokjs-base",
+  "name": "springbokjs-base-next",
   "description": "Springbok Base, Gulp tasks",
   "keywords": [
     "springbokjs",
@@ -7,7 +7,7 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.7.0",
+  "version": "0.1.0",
   "homepage": "springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -27,6 +27,7 @@
     "gulp-concat": "git://github.com/christophehurpeau/gulp-concat.git#master",
     "gulp-csso": "^0.2.8",
     "gulp-ejs-precompiler": "^0.2.0",
+    "gulp-esnext": "git://github.com/sindresorhus/gulp-esnext.git#master",
     "gulp-es6-transpiler": "^0.1.3",
     "gulp-filesize": "0.0.6",
     "gulp-if": "1.2.1",
@@ -39,12 +40,11 @@
     "gulp-rename": "^1.2.0",
     "gulp-size": "^0.3.1",
     "gulp-sourcemaps": "^0.3.1",
-    "gulp-traceur": "git://github.com/christophehurpeau/gulp-traceur.git",
     "gulp-uglify": "^0.3.0",
     "gulp-util": "^2.2.14",
     "jshint-stylish": "~0.2.0",
     "minimist": "0.1.0",
-    "node-notifier": "^2.0.6",
+    "node-notifier": "^3.0.0",
     "portscanner": "^0.2.3",
     "springbokjs-daemon": "^0.1.2",
     "springbokjs-shim": "^0.1.16",

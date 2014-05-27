@@ -1,4 +1,4 @@
-var es6transpiler = require('gulp-traceur');
+var es6transpiler = require('gulp-esnext');
 
 var exec = require('child_process').exec;
 var path = require('path');
@@ -12,7 +12,6 @@ var fs = require('springbokjs-utils/fs');
 var applySourceMap = require('vinyl-sourcemaps-apply');
 
 var browserify = require('browserify');
-var es6ify = require('es6ify');
 
 var changed = require('gulp-changed');
 var concat = require('gulp-concat');
@@ -288,6 +287,7 @@ module.exports = function(pkg, gulp, options) {
 
             return gulp.src(currentSrc, { base: paths.browser.src })
                 .pipe(sourcemaps.init())
+                    .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                     .pipe(through2.obj(function(file, encoding, next) {
                         //TODO fix that !!!!
                         file.on = function(e, c){
@@ -299,8 +299,6 @@ module.exports = function(pkg, gulp, options) {
                         };
                         if (file.relative === mainscript) {
                             var bundle = browserify()
-                                .add(es6ify.runtime)
-                                .transform(es6ify)
                                 .require(file, { entry: file.path, basedir: file.base });
                             if (options.browserify && options.browserify[mainscript]
                                          && options.browserify[mainscript].beforeBundle) {
@@ -347,7 +345,7 @@ module.exports = function(pkg, gulp, options) {
                         output: { beautify: !!argv.production },
                     }))
                 .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
-                .pipe(gulp.dest(paths.browser.dist))
+                .pipe(gulp.dest(paths.browser.dist));
         }));
     });
 
@@ -367,17 +365,16 @@ module.exports = function(pkg, gulp, options) {
         gulp.task(options.prefix + 'server-buildjs', function() {
             return gulp.src(paths.server.src + paths.scripts, { base: paths.server.src })
                 .pipe(changed(paths.server.dist))
-                .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
+                .pipe(es6transpiler({ generator: false }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
 
         gulp.task(options.prefix + 'server-common-js', function() {
             return gulp.src(paths.common.src + paths.scripts, { base: paths.common.src })
                 .pipe(changed(paths.common.dest))
-                .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
+                .pipe(es6transpiler({ generator: false }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(gulp.dest(paths.common.dest));
         });
-        
     }
 
     /* Browser Templates */
@@ -448,7 +445,7 @@ module.exports = function(pkg, gulp, options) {
         tasksDefault.push(options.prefix + 'browser-independant-styles');
     }
     if (argv.env) {
-        tasksDefault.unshift('init-config')
+        tasksDefault.unshift('init-config');
     }
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
@@ -475,7 +472,7 @@ module.exports = function(pkg, gulp, options) {
         var logfileChanged = function(from) {
             return function(file) {
                 console.log('[watch] ' + from + ': ' + file.path);
-            }
+            };
         };
 
         var port = startport + (options.multiIndex || 0);
@@ -483,7 +480,8 @@ module.exports = function(pkg, gulp, options) {
         var livereloadServer = livereload(livereloadPort);
 
         if (paths.server) {
-            var daemon = require('springbokjs-daemon').node([
+            var daemon = require('springbokjs-daemon')('n', [
+                'use', '0.11.13',
                 '--harmony', paths.server.dist + paths.server.startfile,
                 '--port=' + port,
                 '--livereloadPort=' + livereloadPort
