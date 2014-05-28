@@ -448,7 +448,7 @@ module.exports = function(pkg, gulp, options) {
         tasksDefault.push(options.prefix + 'browser-independant-styles');
     }
     if (argv.env) {
-        tasksDefault.unshift('init-config')
+        tasksDefault.unshift('init-config');
     }
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
@@ -475,15 +475,16 @@ module.exports = function(pkg, gulp, options) {
         var logfileChanged = function(from) {
             return function(file) {
                 console.log('[watch] ' + from + ': ' + file.path);
-            }
+            };
         };
 
         var port = startport + (options.multiIndex || 0);
-        var livereloadPort = argv.startlivereloadPort || (port + 100);
+        var livereloadPort = (argv.startlivereloadPort || (startport + 100)) + (options.multiIndex || 0);
         var livereloadServer = livereload(livereloadPort);
 
+        var daemon;
         if (paths.server) {
-            var daemon = require('springbokjs-daemon').node([
+            daemon = require('springbokjs-daemon').node([
                 '--harmony', paths.server.dist + paths.server.startfile,
                 '--port=' + port,
                 '--livereloadPort=' + livereloadPort
