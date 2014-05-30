@@ -1,3 +1,4 @@
+/* jshint maxlen: 200 */
 var es6transpiler = require('gulp-traceur');
 
 var exec = require('child_process').exec;
@@ -247,8 +248,10 @@ module.exports = function(pkg, gulp, options) {
         "eqnull": true,
         "node": true
     }, options.jshintOptions);
-    options.jshintBrowserOptions = objectUtils.mextend(options.jshintBrowserOptions || {}, {"browser": true}, jshintOptions);
-    options.jshintServerOptions = objectUtils.extend(options.jshintServerOptions || {}, jshintOptions);
+    options.jshintBrowserOptions = objectUtils.mextend(options.jshintBrowserOptions || {},
+                                                        {"browser": true}, jshintOptions);
+    options.jshintServerOptions = objectUtils.mextend(options.jshintServerOptions || {},
+                                                        {"browser": false}, jshintOptions);
 
     gulp.task(options.prefix + 'browser-lintjs', function() {
         return gulp.src([paths.browser.src + paths.scripts, paths.common.src + paths.scripts, ])
@@ -291,11 +294,13 @@ module.exports = function(pkg, gulp, options) {
                     .pipe(through2.obj(function(file, encoding, next) {
                         //TODO fix that !!!!
                         file.on = function(e, c){
+                            /* jshint ignore:start */
                             if (e === 'end') process.nextTick(c);
                             else if (e === 'data') c(file.contents);
                             else if (e === 'error') ;
                             else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
                             else throw new Error(e);
+                            /* jshint ignore:end */
                         };
                         if (file.relative === mainscript) {
                             var bundle = browserify()
@@ -339,7 +344,7 @@ module.exports = function(pkg, gulp, options) {
                         mangle: false,
                         compress: {
                             warnings: false,
-                            global_defs: browserConfig,
+                            global_defs: browserConfig,// jshint ignore:line
                             unsafe: false, //!oldIe
                             comparisons: true,
                             sequences: false
@@ -347,7 +352,7 @@ module.exports = function(pkg, gulp, options) {
                         output: { beautify: !!argv.production },
                     }))
                 .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
-                .pipe(gulp.dest(paths.browser.dist))
+                .pipe(gulp.dest(paths.browser.dist));
         }));
     });
 
