@@ -68,32 +68,36 @@ var init = function(gulp, paths) {
         if (!argv.env) {
             return done();
         }
-        Promise.all([
-            fs.readYamlFile(paths.config + argv.env + '.yml'),
-            fs.readYamlFile(paths.config + 'common.yml'),
-        ]).then(function(results) {
-            var config = objectUtils.extend(results[1] || {}, results[0]);
-            browserConfig = objectUtils.mextend({
-                basepath: '/',
-            }, config.common, config.browser, {
-                production: !!argv.production,
+        fs.mkdir(paths.server.configdest)
+            .then(then)
+            .catch(then);
+        function then() {
+            Promise.all([
+                fs.readYamlFile(paths.config + argv.env + '.yml'),
+                fs.readYamlFile(paths.config + 'common.yml'),
+            ]).then(function(results) {
+                var config = objectUtils.extend(results[1] || {}, results[0]);
+                browserConfig = objectUtils.mextend({
+                    basepath: '/',
+                }, config.common, config.browser, {
+                    production: !!argv.production,
+                });
+                serverConfig = objectUtils.extend(config.common || {}, config.server);
+                return fs.writeFile(paths.server.configdest + 'config.js',
+                 'module.exports = ' + JSON.stringify(serverConfig, null, 4));
+            })
+            .then(function() {
+                done();
+            })
+            .catch(function(err) {
+                console.error(err);
+                done(err);
             });
-            serverConfig = objectUtils.extend(config.common || {}, config.server);
-            return fs.writeFile(paths.server.configdest + 'config.js',
-             'module.exports = ' + JSON.stringify(serverConfig, null, 4));
-        })
-        .then(function() {
-            done();
-        })
-        .catch(function(err) {
-            console.error(err);
-            done(err);
-        });
+        }
     });
 };
 
 module.exports = function(pkg, gulp, options) {
-
     var notifier = new Notification();
     var _notify = function(title, message) {
         notifier.notify({
