@@ -1,5 +1,6 @@
 /* jshint maxlen: 200 */
-var es6transpiler = require('gulp-traceur');
+var traceur = require('gulp-traceur');
+var es6transpiler = require('gulp-esnext');
 
 var exec = require('child_process').exec;
 var path = require('path');
@@ -25,8 +26,8 @@ var insert = require('gulp-insert');
 var jshint = require('gulp-jshint');
 var less = require('gulp-less');
 var livereload = require('gulp-livereload');
-var recess = require('gulp-recess');
-var rename = require('gulp-rename');
+//var recess = require('gulp-recess');
+//var rename = require('gulp-rename');
 var sourcemaps = require('gulp-sourcemaps');
 //var es6transpiler = require('gulp-es6-transpiler');
 var uglify = require('gulp-uglify');
@@ -132,11 +133,15 @@ module.exports = function(pkg, gulp, options) {
         browser: {},
         server: 'src/server/',
         config: 'src/config/',
-        common: {
-            src: 'src/common/',
-            dest: 'lib/common/', // destination for server-side.
-        },
     }, options.paths);
+    paths.common = objectUtils.extend({
+        src: false,/*{
+            browser: 'src/common/browser/',
+            common: 'src/common/common/',
+            server: 'src/common/server/',
+        }*/
+        dest: 'lib/common/', // destination for server-side.
+    }, paths.common);
     paths.browser = objectUtils.extend({
         src: 'src/browser/',
         dist: 'public/dist/',
@@ -151,6 +156,7 @@ module.exports = function(pkg, gulp, options) {
         paths.browser.mainscripts = [ paths.browser.mainscripts ];
     }
     paths.server = paths.server !== false && objectUtils.extend({
+        common: 'src/common/',
         dist: 'lib/server/',
         startfile: 'server.js',
         templatesEJS: '**/*.ejs',
@@ -205,30 +211,30 @@ module.exports = function(pkg, gulp, options) {
 
     /* Lint Scripts */
 
-    var previousLintJsSuccess = null;
-    var jshintReported = false;
-    var jshintReporter = function() {
+    var previousLintJsSuccess = {};
+    var jshintReported = {};
+    var jshintReporter = function(key) {
         return through2.obj(function (file, enc, next) {
             if (!file.jshint.success) {
-                if (!jshintReported) {
-                    gutil.log(gutil.colors.red('✖'), 'jshint');
-                    logAndNotify('jshint failed :(' +(previousLintJsSuccess === false ? '' : ' Again !'), true)();
-                    jshintReported = true;
+                if (!jshintReported[key]) {
+                    gutil.log(gutil.colors.red('✖'), 'jshint ' + key);
+                    logAndNotify('jshint failed :(' +(previousLintJsSuccess[key] === false ? '' : ' Again !'), true)();
+                    jshintReported[key] = true;
                 }
-                previousLintJsSuccess = false;
+                previousLintJsSuccess[key] = false;
             }
             this.push(file);
             next();
         }, function (onEnd) {
-            if (!previousLintJsSuccess && !jshintReported) {
-                if (previousLintJsSuccess === false) {
+            if (!previousLintJsSuccess[key] && !jshintReported[key]) {
+                if (previousLintJsSuccess[key] === false) {
                     logAndNotify('jshint successful :)', true)();
                 }
-                previousLintJsSuccess = true;
-                gutil.log(gutil.colors.green('✔'), 'jshint');
+                previousLintJsSuccess[key] = true;
+                gutil.log(gutil.colors.green('✔'), 'jshint ' + key);
             }
             // reset for next time
-            jshintReported = false;
+            jshintReported[key] = false;
             onEnd();
         });
     };
@@ -259,19 +265,30 @@ module.exports = function(pkg, gulp, options) {
                                                         {"browser": false}, jshintOptions);
 
     gulp.task(options.prefix + 'browser-lintjs', function() {
-        return gulp.src([paths.browser.src + paths.scripts, paths.common.src + paths.scripts, ])
+        return gulp.src([
+                paths.browser.src + paths.scripts,
+                paths.common.src && paths.common.src.browser && (paths.common.src.browser + paths.scripts),
+                paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
+                paths.browser.common && (paths.browser.common + paths.scripts)
+            ].filter(function(elt) { return !!elt; }))
             //.pipe(insert.prepend("\"use strict\";     "))
             .pipe(jshint(options.jshintBrowserOptions))
-            .pipe(jshintReporter())
+            .pipe(jshintReporter(options.prefix + 'browser'))
             .pipe(jshint.reporter('jshint-stylish'));
     });
 
     if (paths.server) {
         gulp.task(options.prefix + 'server-lintjs', function() {
-            return gulp.src([ 'gulpfile.js', paths.server.src + paths.scripts, paths.common.src + paths.scripts ], { base: paths.server.src })
+            return gulp.src([
+                    'gulpfile.js',
+                    paths.server.src + paths.scripts,
+                    paths.common.src && paths.common.src.server && (paths.common.src.server + paths.scripts),
+                    paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
+                    paths.server.common && (paths.server.common + paths.scripts)
+                ].filter(function(elt) { return !!elt; }), { base: paths.server.src })
                 //.pipe(insert.prepend("\"use strict\";     "))
                 .pipe(jshint(options.jshintServerOptions))
-                .pipe(jshintReporter())
+                .pipe(jshintReporter(options.prefix + 'server'))
                 .pipe(jshint.reporter('jshint-stylish'));
         });
     }
@@ -378,13 +395,19 @@ module.exports = function(pkg, gulp, options) {
             return gulp.src(paths.server.src + paths.scripts, { base: paths.server.src })
                 .pipe(changed(paths.server.dist))
                 .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
+                .pipe(traceur().on('error', logAndNotify('traceur failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
 
         gulp.task(options.prefix + 'server-common-js', function() {
-            return gulp.src(paths.common.src + paths.scripts, { base: paths.common.src })
+            return gulp.src([
+                    paths.common.src && paths.common.src.server && (paths.common.src.server + paths.scripts),
+                    paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
+                    paths.server.common && (paths.server.common + paths.scripts)
+                ].filter(function(elt) { return !!elt; }))
                 .pipe(changed(paths.common.dest))
                 .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
+                .pipe(traceur().on('error', logAndNotify('traceur failed')))
                 .pipe(gulp.dest(paths.common.dest));
         });
     }
@@ -431,7 +454,7 @@ module.exports = function(pkg, gulp, options) {
     gulp.task(options.prefix + 'browser-images', function() {
         return gulp.src(paths.browser.src + paths.browser.images + '/**/*', { base: paths.browser.src + paths.browser.images })
             //.pipe(notify("Image: <%= file.relative %>"))
-            .pipe(gulp.dest(paths['public'] + 'images/'));
+            .pipe(gulp.dest(paths.public + 'images/'));
     });
 
     gulp.task(options.prefix + 'browser-imagesmin', [options.prefix + 'browser-images'], function() {
