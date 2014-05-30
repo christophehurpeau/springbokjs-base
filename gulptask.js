@@ -142,7 +142,7 @@ module.exports = function(pkg, gulp, options) {
         dist: 'public/dist/',
         mainscripts: "js/" + pkg.name + ".js",
         styles: 'style/',
-        mainstyle: pkg.name + '.less',
+        mainstyle: 'main.less',
         templatesEJS: 'templates/',
         images: "images",
     }, paths.browser);
