@@ -141,7 +141,8 @@ module.exports = function(pkg, gulp, options) {
         src: 'src/browser/',
         dist: 'public/dist/',
         mainscripts: "js/" + pkg.name + ".js",
-        styles: 'style/main.less',
+        styles: 'style/',
+        mainstyle: pkg.name + '.less',
         templatesEJS: 'templates/',
         images: "images",
     }, paths.browser);
@@ -186,8 +187,8 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task(options.prefix + 'browser-styles', function() {
         var src = options.src && options.src.css || [];
-        src.push(paths.browser.src + paths.browser.styles);
-        gulp.src(src, { base: paths.browser.src })
+        src.push(paths.browser.src + paths.browser.styles + paths.browser.mainstyle);
+        gulp.src(src, { base: paths.browser.src + paths.browser.styles })
             .pipe(sourcemaps.init())
                 .pipe(gulpif(/.less$/, less(lessOptions).on('error', logAndNotify('Less failed'))))
                 .pipe(concat(pkg.name + /* '-' + pkg.version +*/ '.css'))
@@ -386,7 +387,6 @@ module.exports = function(pkg, gulp, options) {
                 .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(gulp.dest(paths.common.dest));
         });
-        
     }
 
     /* Browser Templates */
