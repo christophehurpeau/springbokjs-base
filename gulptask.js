@@ -26,6 +26,7 @@ var insert = require('gulp-insert');
 var jshint = require('gulp-jshint');
 var less = require('gulp-less');
 var livereload = require('gulp-livereload');
+var plumber = require('gulp-plumber');
 //var recess = require('gulp-recess');
 //var rename = require('gulp-rename');
 var sourcemaps = require('gulp-sourcemaps');
@@ -394,6 +395,7 @@ module.exports = function(pkg, gulp, options) {
         gulp.task(options.prefix + 'server-buildjs', function() {
             return gulp.src(paths.server.src + paths.scripts, { base: paths.server.src })
                 .pipe(changed(paths.server.dist))
+                .pipe(plumber())
                 .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(traceur().on('error', logAndNotify('traceur failed')))
                 .pipe(gulp.dest(paths.server.dist));
@@ -406,6 +408,7 @@ module.exports = function(pkg, gulp, options) {
                     paths.server.common && (paths.server.common + paths.scripts)
                 ].filter(function(elt) { return !!elt; }))
                 .pipe(changed(paths.common.dest))
+                .pipe(plumber())
                 .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(traceur().on('error', logAndNotify('traceur failed')))
                 .pipe(gulp.dest(paths.common.dest));
@@ -527,7 +530,12 @@ module.exports = function(pkg, gulp, options) {
             });
         }
 
-        gulp.watch(paths.browser.src + paths.scripts,[options.prefix + 'browser-js'])
+        gulp.watch([
+                paths.browser.src + paths.scripts,
+                paths.common.src && paths.common.src.browser && (paths.common.src.browser + paths.scripts),
+                paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
+                paths.browser.common && (paths.browser.common + paths.scripts)
+        ].filter(function(elt) { return !!elt; }), [options.prefix + 'browser-js'])
             .on('change', logfileChanged('browser.scripts'));
         gulp.watch([ paths.browser.src + '**/*.less', paths.browser.src + '**/*.css' ], [options.prefix + 'browser-styles'])
             .on('change', logfileChanged('css&less'));
@@ -543,7 +551,11 @@ module.exports = function(pkg, gulp, options) {
             gulp.watch(paths.server.src + paths.server.templatesEJS, [options.prefix + 'server-ejs'])
                 .on('change', logfileChanged('templatesEJS'));
 
-            gulp.watch(paths.common.src + paths.scripts, [options.prefix + 'server-common-js'])
+            gulp.watch([
+                    paths.common.src && paths.common.src.server && (paths.common.src.server + paths.scripts),
+                    paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
+                    paths.server.common && (paths.server.common + paths.scripts)
+            ].filter(function(elt) { return !!elt; }), [options.prefix + 'server-common-js'])
                 .on('change', logfileChanged('common.scripts'));
 
             gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
