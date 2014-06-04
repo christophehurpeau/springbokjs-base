@@ -313,6 +313,7 @@ module.exports = function(pkg, gulp, options) {
             currentSrc.unshift('node_modules/springbokjs-base/src/init.js');
 
             return gulp.src(currentSrc, { base: paths.browser.src })
+                //.pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(sourcemaps.init())
                     .pipe(through2.obj(function(file, encoding, next) {
                         //TODO fix that !!!!
@@ -418,7 +419,12 @@ module.exports = function(pkg, gulp, options) {
     /* Browser Templates */
 
     gulp.task(options.prefix + 'browser-ejs', function() {
-        return gulp.src(paths.browser.src + paths.browser.templatesEJS + '**/*.ejs', { base: paths.browser.src + paths.browser.templatesEJS })
+        return gulp.src([
+                paths.browser.src + paths.browser.templatesEJS + '**/*.ejs',
+                paths.common.src && paths.common.src.browser && (paths.common.src.browser + paths.browser.templatesEJS + '**/*.ejs'),
+                paths.common.src && paths.common.src.common && (paths.common.src.common + paths.browser.templatesEJS + '**/*.ejs'),
+                paths.browser.common && (paths.browser.common + paths.browser.templatesEJS + '**/*.ejs')
+            ].filter(function(elt) { return !!elt; }))
             .pipe(ejs({ compileDebug: true, client: true }).on('error', logAndNotify('EJS compile failed')))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.js'))
             .pipe(insert.prepend('window.templates = {};'+"\n"))
@@ -438,14 +444,19 @@ module.exports = function(pkg, gulp, options) {
 
     if (paths.server) {
         gulp.task(options.prefix + 'server-ejs', function() {
-            return gulp.src(paths.server.src + paths.server.templatesEJS, { base: paths.server.src })
+            return gulp.src([
+                    paths.server.src + paths.server.templatesEJS,
+                    paths.common.src && paths.common.src.server && (paths.common.src.server + paths.server.templatesEJS),
+                    paths.common.src && paths.common.src.common && (paths.common.src.common + paths.server.templatesEJS),
+                    paths.server.common && (paths.server.common + paths.server.templatesEJS)
+                ].filter(function(elt) { return !!elt; }))
                 //.pipe(changed(paths.server.dist))
                 //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
 
         gulp.task(options.prefix + 'server-ejsmin', function() {
-            return gulp.src(paths.server.src + paths.server.templatesEJS, { base: paths.server.src })
+            return gulp.src(paths.server.src + paths.server.templatesEJS)
                 //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('server EJS compile failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
