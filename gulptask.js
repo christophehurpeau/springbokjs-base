@@ -313,6 +313,7 @@ module.exports = function(pkg, gulp, options) {
 
             return gulp.src(currentSrc, { base: paths.browser.src })
                 .pipe(sourcemaps.init())
+                    .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                     .pipe(through2.obj(function(file, encoding, next) {
                         //TODO fix that !!!!
                         file.on = function(e, c){
