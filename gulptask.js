@@ -418,13 +418,15 @@ module.exports = function(pkg, gulp, options) {
 
     /* Browser Templates */
 
+    var srcBrowserTemplates = [
+        paths.browser.src + paths.browser.templatesEJS + '**/*.ejs',
+        paths.common.src && paths.common.src.browser && (paths.common.src.browser + paths.browser.templatesEJS + '**/*.ejs'),
+        paths.common.src && paths.common.src.common && (paths.common.src.common + paths.browser.templatesEJS + '**/*.ejs'),
+        paths.browser.common && (paths.browser.common + paths.browser.templatesEJS + '**/*.ejs')
+    ].filter(function(elt) { return !!elt; });
+
     gulp.task(options.prefix + 'browser-ejs', function() {
-        return gulp.src([
-                paths.browser.src + paths.browser.templatesEJS + '**/*.ejs',
-                paths.common.src && paths.common.src.browser && (paths.common.src.browser + paths.browser.templatesEJS + '**/*.ejs'),
-                paths.common.src && paths.common.src.common && (paths.common.src.common + paths.browser.templatesEJS + '**/*.ejs'),
-                paths.browser.common && (paths.browser.common + paths.browser.templatesEJS + '**/*.ejs')
-            ].filter(function(elt) { return !!elt; }))
+        return gulp.src(srcBrowserTemplates)
             .pipe(ejs({ compileDebug: true, client: true }).on('error', logAndNotify('EJS compile failed')))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.js'))
             .pipe(insert.prepend('window.templates = {};'+"\n"))
@@ -432,7 +434,7 @@ module.exports = function(pkg, gulp, options) {
     });
 
     gulp.task(options.prefix + 'browser-ejsmin', function() {
-        return gulp.src(paths.browser.src + paths.browser.templatesEJS + '**/*.ejs')
+        return gulp.src(srcBrowserTemplates)
             .pipe(ejs({ compileDebug: false, client: true }).on('error', logAndNotify('EJS compile failed')))
             .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.min.js'))
             .pipe(insert.prepend('window.templates = {};'+"\n"))
@@ -442,21 +444,23 @@ module.exports = function(pkg, gulp, options) {
 
     /* Server Templates */
 
+    var srcServerTemplaces = [
+        paths.server.src + paths.server.templatesEJS,
+        paths.common.src && paths.common.src.server && (paths.common.src.server + paths.server.templatesEJS),
+        paths.common.src && paths.common.src.common && (paths.common.src.common + paths.server.templatesEJS),
+        paths.server.common && (paths.server.common + paths.server.templatesEJS)
+    ].filter(function(elt) { return !!elt; });
+
     if (paths.server) {
         gulp.task(options.prefix + 'server-ejs', function() {
-            return gulp.src([
-                    paths.server.src + paths.server.templatesEJS,
-                    paths.common.src && paths.common.src.server && (paths.common.src.server + paths.server.templatesEJS),
-                    paths.common.src && paths.common.src.common && (paths.common.src.common + paths.server.templatesEJS),
-                    paths.server.common && (paths.server.common + paths.server.templatesEJS)
-                ].filter(function(elt) { return !!elt; }))
+            return gulp.src(srcServerTemplaces)
                 //.pipe(changed(paths.server.dist))
                 //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
 
         gulp.task(options.prefix + 'server-ejsmin', function() {
-            return gulp.src(paths.server.src + paths.server.templatesEJS)
+            return gulp.src(srcServerTemplaces)
                 //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('server EJS compile failed')))
                 .pipe(gulp.dest(paths.server.dist));
         });
@@ -550,8 +554,8 @@ module.exports = function(pkg, gulp, options) {
             .on('change', logfileChanged('browser.scripts'));
         gulp.watch([ paths.browser.src + '**/*.less', paths.browser.src + '**/*.css' ], [options.prefix + 'browser-styles'])
             .on('change', logfileChanged('css&less'));
-        gulp.watch(paths.browser.src + paths.browser.templatesEJS, [options.prefix + 'browser-ejs'])
-            .on('change', logfileChanged('ejs'));
+        gulp.watch(srcBrowserTemplates, [options.prefix + 'browser-ejs'])
+            .on('change', logfileChanged('browser.templatesEJS'));
         gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
             .on('change', logfileChanged('images'));
 
@@ -559,15 +563,15 @@ module.exports = function(pkg, gulp, options) {
             daemon.start();
             gulp.watch(paths.server.src + paths.scripts, [options.prefix + 'server-js'])
                 .on('change', logfileChanged('server.scripts'));
-            gulp.watch(paths.server.src + paths.server.templatesEJS, [options.prefix + 'server-ejs'])
-                .on('change', logfileChanged('templatesEJS'));
+            gulp.watch(srcServerTemplaces, [options.prefix + 'server-ejs'])
+                .on('change', logfileChanged('server.templatesEJS'));
 
             gulp.watch([
                     paths.common.src && paths.common.src.server && (paths.common.src.server + paths.scripts),
                     paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
                     paths.server.common && (paths.server.common + paths.scripts)
             ].filter(function(elt) { return !!elt; }), [options.prefix + 'server-common-js'])
-                .on('change', logfileChanged('common.scripts'));
+                .on('change', logfileChanged('server.commonScripts'));
 
             gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
                 logfileChanged('server')(file);
