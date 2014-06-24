@@ -1,38 +1,65 @@
 /* jshint maxlen: 200 */
-var traceur = require('gulp-traceur');
-var es6transpiler = require('gulp-esnext');
+require('es6-shim/es6-shim');
 
 var exec = require('child_process').exec;
-var path = require('path');
-var through2 = require('through2');
-var gutil = require('gulp-util');
-var eventStream = require('event-stream');
-var path = require('path');
 var S = require('springbokjs-utils');
 var objectUtils = require('springbokjs-utils/object');
 var fs = require('springbokjs-utils/fs');
-var applySourceMap = require('vinyl-sourcemaps-apply');
-
-var browserify = require('browserify');
-var es6ify = require('es6ify');
 
 var plugins = require('gulp-load-plugins')();
-var changed = plugins.changed;
-var concat = plugins.concat;
-var csso = plugins.csso;
-var ejs = plugins.ejsPrecompiler;
-var filesize = plugins.filesize;
-var gulpif = plugins.if;
-var insert = plugins.insert;
-var jshint = plugins.jshint;
-var less = plugins.less;
+Object.defineProperty(plugins, 'less', { value: require('gulp-less') });
+Object.defineProperty(plugins, 'concat', { value: require('gulp-concat') });
+Object.defineProperty(plugins, 'traceur', { value: require('gulp-traceur') });
+Object.defineProperty(plugins, 'changed', { value: require('gulp-changed') });
+Object.defineProperty(plugins, 'closureCompiler', { value: require('gulp-closure-compiler') });
+Object.defineProperty(plugins, 'csso', { value: require('gulp-csso') });
+Object.defineProperty(plugins, 'ejsPrecompiler', { value: require('gulp-ejs-precompiler') });
+Object.defineProperty(plugins, 'es6Transpiler', { value: require('gulp-es6-transpiler') });
+Object.defineProperty(plugins, 'esnext', { value: require('gulp-esnext') });
+Object.defineProperty(plugins, 'filesize', { value: require('gulp-filesize') });
+Object.defineProperty(plugins, 'if', { value: require('gulp-if') });
+Object.defineProperty(plugins, 'imagemin', { value: require('gulp-imagemin') });
+Object.defineProperty(plugins, 'insert', { value: require('gulp-insert') });
+Object.defineProperty(plugins, 'jshint', { value: require('gulp-jshint') });
+Object.defineProperty(plugins, 'livereload', { value: require('gulp-livereload') });
+Object.defineProperty(plugins, 'notify', { value: require('gulp-notify') });
+Object.defineProperty(plugins, 'plumber', { value: require('gulp-plumber') });
+Object.defineProperty(plugins, 'recess', { value: require('gulp-recess') });
+Object.defineProperty(plugins, 'rename', { value: require('gulp-rename') });
+Object.defineProperty(plugins, 'size', { value: require('gulp-size') });
+Object.defineProperty(plugins, 'sourcemaps', { value: require('gulp-sourcemaps') });
+Object.defineProperty(plugins, 'stylus', { value: require('gulp-stylus') });
+Object.defineProperty(plugins, 'uglify', { value: require('gulp-uglify') });
+// Object.defineProperty(plugins, 'less', { get: function() { return require('gulp-less'); } });
+// Object.defineProperty(plugins, 'concat', { get: function() { return require('gulp-concat'); } });
+// Object.defineProperty(plugins, 'traceur', { get: function() { return require('gulp-traceur'); } });
+// Object.defineProperty(plugins, 'changed', { get: function() { return require('gulp-changed'); } });
+// Object.defineProperty(plugins, 'closureCompiler', { get: function() { return require('gulp-closure-compiler'); } });
+// Object.defineProperty(plugins, 'csso', { get: function() { return require('gulp-csso'); } });
+// Object.defineProperty(plugins, 'ejsPrecompiler', { get: function() { return require('gulp-ejs-precompiler'); } });
+// Object.defineProperty(plugins, 'es6Transpiler', { get: function() { return require('gulp-es6-transpiler'); } });
+// Object.defineProperty(plugins, 'esnext', { get: function() { return require('gulp-esnext'); } });
+// Object.defineProperty(plugins, 'filesize', { get: function() { return require('gulp-filesize'); } });
+// Object.defineProperty(plugins, 'if', { get: function() { return require('gulp-if'); } });
+// Object.defineProperty(plugins, 'imagemin', { get: function() { return require('gulp-imagemin'); } });
+// Object.defineProperty(plugins, 'insert', { get: function() { return require('gulp-insert'); } });
+// Object.defineProperty(plugins, 'jshint', { get: function() { return require('gulp-jshint'); } });
+// Object.defineProperty(plugins, 'livereload', { get: function() { return require('gulp-livereload'); } });
+// Object.defineProperty(plugins, 'notify', { get: function() { return require('gulp-notify'); } });
+// Object.defineProperty(plugins, 'plumber', { get: function() { return require('gulp-plumber'); } });
+// Object.defineProperty(plugins, 'recess', { get: function() { return require('gulp-recess'); } });
+// Object.defineProperty(plugins, 'rename', { get: function() { return require('gulp-rename'); } });
+// Object.defineProperty(plugins, 'size', { get: function() { return require('gulp-size'); } });
+// Object.defineProperty(plugins, 'sourcemaps', { get: function() { return require('gulp-sourcemaps'); } });
+// Object.defineProperty(plugins, 'stylus', { get: function() { return require('gulp-stylus'); } });
+// Object.defineProperty(plugins, 'uglify', { get: function() { return require('gulp-uglify'); } });
+// Object.defineProperty(plugins, 'util', { get: function() { return require('gulp-util'); } });
+
+var gutil = require('gulp-util');
 var livereload = plugins.livereload;
-var plumber = plugins.plumber;
 //var recess = require('gulp-recess');
 //var rename = require('gulp-rename');
-var sourcemaps = plugins.sourcemaps;
 //var es6transpiler = require('gulp-es6-transpiler');
-var uglify = plugins.uglify;
 //var notify = require('gulp-notify');
 var Notification = require("node-notifier");
 
@@ -48,8 +75,8 @@ if (argv.port) {
 }
 var startport;
 
-var browserConfig, serverConfig;
-var init = function(gulp, paths) {
+var init = function(gulp, options) {
+    var paths = options.paths;
     init = function() {};
     gulp.task('define-port', function(done) {
         if (startport) {
@@ -79,15 +106,15 @@ var init = function(gulp, paths) {
                 fs.readYamlFile(paths.config + argv.env + '.yml'),
                 fs.readYamlFile(paths.config + 'common.yml'),
             ]).then(function(results) {
-                var config = objectUtils.extend(results[1] || {}, results[0]);
-                browserConfig = objectUtils.mextend({
+                var config = Object.assign(results[1] || {}, results[0]);
+                options.browserConfig = objectUtils.mextend({
                     basepath: '/',
-                }, config.common, config.browser, {
+                }, config.common || {}, config.browser || {}, {
                     production: !!argv.production,
                 });
-                serverConfig = objectUtils.extend(config.common || {}, config.server);
+                options.serverConfig = Object.assign(config.common || {}, config.server || {});
                 return fs.writeFile(paths.server.configdest + 'config.js',
-                 'module.exports = ' + JSON.stringify(serverConfig, null, 4));
+                 'module.exports = ' + JSON.stringify(options.serverConfig, null, 4));
             })
             .then(function() {
                 done();
@@ -166,306 +193,35 @@ module.exports = function(pkg, gulp, options) {
     }, S.isString(paths.server) ? { src: paths.server } : paths.server);
 
     options.prefix = options.prefix || '';
+    options.paths = paths;
+    options.argv = argv;
 
     /* Init : tasks only applied once */
-    init(gulp, paths);
+    init(gulp, options);
 
-    /* Styles */
+    var tasks = [
+        /* Styles */
+        require('./tasks/browser-styles.js'),
+        /* Lint Scripts */
+        require('./tasks/lint-scripts.js'),
+        /* Browser scripts */
+        require('./tasks/browser-scripts.js'),
+        /* Server scripts */
+        require('./tasks/server-scripts.js'),
+        /* Browser Templates */
+        require('./tasks/browser-templates.js'),
+        /* Server Templates */
+        require('./tasks/server-templates.js'),
+    ];
+    var watchTasks = [];
 
-    var lessOptions = {
-        compress: false,
-        cleancss: false,
-        strictImports: true,
-        strictUnits: true,
-        sourceMap: true,
-        modifyVars: {
-            production: !!argv.production
-        },
-    };
-    if (paths.browser.independantStyles) {
-        gulp.task(options.prefix + 'browser-independant-styles', function() {
-            return gulp.src(paths.browser.independantStyles, { base: paths.browser.src })
-                /*.pipe(recess(objectUtils.extend({
-                    noOverqualifying: false
-                }, options.recessOptions)).on('error', logAndNotify('Recess failed')))*/
-                .pipe(less(lessOptions).on('error', logAndNotify('Less failed')))
-                .pipe(gulp.dest(paths.browser.dist));
-        });
-    }
-
-    gulp.task(options.prefix + 'browser-styles', function() {
-        var src = options.src && options.src.css || [];
-        src.push(paths.browser.src + paths.browser.styles + paths.browser.mainstyle);
-        gulp.src(src, { base: paths.browser.src + paths.browser.styles })
-            .pipe(sourcemaps.init())
-                .pipe(gulpif(/.less$/, less(lessOptions).on('error', logAndNotify('Less failed'))))
-                .pipe(concat(pkg.name + /* '-' + pkg.version +*/ '.css'))
-            .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
-            .pipe(gulp.dest(paths.browser.dist));
-    });
-
-    gulp.task(options.prefix + 'browser-styles-min', [options.prefix + 'browser-styles'], function() {
-        gulp.src(paths.browser.dist + '*.css')
-            .pipe(csso())
-            .pipe(gulp.dest(paths.browser.dist));
-    });
-
-
-    /* Lint Scripts */
-
-    var previousLintJsSuccess = {};
-    var jshintReported = {};
-    var jshintReporter = function(key) {
-        return through2.obj(function (file, enc, next) {
-            if (!file.jshint.success) {
-                if (!jshintReported[key]) {
-                    gutil.log(gutil.colors.red('✖'), 'jshint ' + key);
-                    logAndNotify('jshint failed :(' +(previousLintJsSuccess[key] === false ? '' : ' Again !'), true)();
-                    jshintReported[key] = true;
-                }
-                previousLintJsSuccess[key] = false;
-            }
-            this.push(file);
-            next();
-        }, function (onEnd) {
-            if (!previousLintJsSuccess[key] && !jshintReported[key]) {
-                if (previousLintJsSuccess[key] === false) {
-                    logAndNotify('jshint successful :)', true)();
-                }
-                previousLintJsSuccess[key] = true;
-                gutil.log(gutil.colors.green('✔'), 'jshint ' + key);
-            }
-            // reset for next time
-            jshintReported[key] = false;
-            onEnd();
-        });
-    };
-
-    var jshintOptions = objectUtils.extend({
-        //"globalstrict": true, // because browserify encapsule them in functions
-        "esnext": true,
-        "camelcase": true,
-        "curly": true,
-        "freeze": true,
-        "indent": 4,
-        "latedef": "nofunc",
-        "newcap": true,
-        "noarg": true,
-        "undef": true,
-        "unused": "vars",
-        "laxbreak": true,
-        "maxparams": 8,
-        "maxdepth": 6,
-        "maxlen": 120,
-        "boss": true,
-        "eqnull": true,
-        "node": true
-    }, options.jshintOptions);
-    options.jshintBrowserOptions = objectUtils.mextend(options.jshintBrowserOptions || {},
-                                                        {"browser": true}, jshintOptions);
-    options.jshintServerOptions = objectUtils.mextend(options.jshintServerOptions || {},
-                                                        {"browser": false}, jshintOptions);
-
-    gulp.task(options.prefix + 'browser-lintjs', function() {
-        return gulp.src([
-                paths.browser.src + paths.scripts,
-                paths.common.src && paths.common.src.browser && (paths.common.src.browser + paths.scripts),
-                paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
-                paths.browser.common && (paths.browser.common + paths.scripts)
-            ].filter(function(elt) { return !!elt; }))
-            //.pipe(insert.prepend("\"use strict\";     "))
-            .pipe(jshint(options.jshintBrowserOptions))
-            .pipe(jshintReporter(options.prefix + 'browser'))
-            .pipe(jshint.reporter('jshint-stylish'));
-    });
-
-    if (paths.server) {
-        gulp.task(options.prefix + 'server-lintjs', function() {
-            return gulp.src([
-                    'gulpfile.js',
-                    paths.server.src + paths.scripts,
-                    paths.common.src && paths.common.src.server && (paths.common.src.server + paths.scripts),
-                    paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
-                    paths.server.common && (paths.server.common + paths.scripts)
-                ].filter(function(elt) { return !!elt; }), { base: paths.server.src })
-                //.pipe(insert.prepend("\"use strict\";     "))
-                .pipe(jshint(options.jshintServerOptions))
-                .pipe(jshintReporter(options.prefix + 'server'))
-                .pipe(jshint.reporter('jshint-stylish'));
-        });
-    }
-
-    /* Browser scripts */
-
-    gulp.task(options.prefix + 'browserifyjs', ['init-config'], function() {
-        var src = options.src && options.src.js || [];
-        if (Array.isArray(src)) {
-            if (paths.browser.mainscripts.length > 1) {
-                gutil.log(gutil.colors.red.bold('the configuration array options.src.js should be defined for each of yours mainscripts'));
-            }
-            var oldSrc = src;
-            src = {};
-            src[paths.browser.mainscripts[0]] = oldSrc;
+    tasks.forEach(function(task) {
+        var result = task(gulp, plugins, options, logAndNotify, pkg);
+        if (result) {
+            watchTasks.push(result);
         }
-
-        return eventStream.merge.apply(eventStream, paths.browser.mainscripts.map(function(mainscript) {
-            var currentSrc = src[mainscript] || [];
-            currentSrc.push(paths.browser.src + mainscript);
-            currentSrc.unshift('node_modules/springbokjs-base/src/init.js');
-
-            return gulp.src(currentSrc, { base: paths.browser.src })
-                //.pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
-                .pipe(sourcemaps.init())
-                    .pipe(through2.obj(function(file, encoding, next) {
-                        //TODO fix that !!!!
-                        file.on = function(e, c){
-                            /* jshint ignore:start */
-                            if (e === 'end') process.nextTick(c);
-                            else if (e === 'data') c(file.contents);
-                            else if (e === 'error') ;
-                            else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
-                            else throw new Error(e);
-                            /* jshint ignore:end */
-                        };
-                        if (file.relative === mainscript) {
-                            var bundle = browserify()
-                                .add(es6ify.runtime)
-                                .transform(es6ify)
-                                .require(file, { entry: file.path, basedir: file.base });
-                            if (options.browserify && options.browserify[mainscript]
-                                         && options.browserify[mainscript].beforeBundle) {
-                                options.browserify[mainscript].beforeBundle(bundle);
-                            }
-                            bundle
-                                .bundle({ debug: true }, function(err, source) {
-                                    if (err) {
-                                        this.emit('error', new gutil.PluginError('task browserifyjs', err));
-                                        return next();
-                                    }
-                                    ////# sourceMappingURL=data:application/json;base64,
-                                    var m = /^[ \t]*(?:\/\/|\/\*)[@#][ \t]+sourceMappingURL=data:(?:application|text)\/json;base64,(.+)(?:\*\/)?/mg.exec(source);
-
-                                    var sourceMapContent = m && m[1];
-                                    if (sourceMapContent) {
-                                        sourceMapContent = new Buffer(sourceMapContent, 'base64').toString();
-                                        var sourceMap = JSON.parse(sourceMapContent);
-                                        sourceMap.sources = sourceMap.sources.map(function(filePath) {
-                                            return path.relative(file.cwd + '/' + file.base, filePath);
-                                        });
-                                        applySourceMap(file, sourceMap);
-                                    }
-                                    file.contents = new Buffer(source);
-                                    this.push(file);
-                                    next();
-                                }.bind(this));
-                        } else {
-                            this.push(file);
-                            next();
-                        }
-                    }).on('error', logAndNotify('browserify failed')))
-                    //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
-                    .pipe(concat(path.basename(mainscript).slice(0, -3) + /*'-' + pkg.version +*/ '.js'))
-                    .pipe(uglify({
-                        mangle: false,
-                        compress: {
-                            warnings: false,
-                            global_defs: browserConfig,// jshint ignore:line
-                            unsafe: false, //!oldIe
-                            comparisons: true,
-                            sequences: false
-                        },
-                        output: { beautify: !!argv.production },
-                    }))
-                .pipe(sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
-                .pipe(gulp.dest(paths.browser.dist));
-        }));
     });
 
-    gulp.task(options.prefix + 'jsmin', [options.prefix + 'browserifyjs'], function() {
-        gulp.src(paths.browser.dist + '*.js')
-            .pipe(filesize())
-            .pipe(uglify())
-            //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.min.js'))
-            .pipe(gulp.dest(paths.browser.dist))
-            .pipe(filesize());
-    });
-
-
-    /* Server scripts */
-
-    if (paths.server) {
-        gulp.task(options.prefix + 'server-buildjs', function() {
-            return gulp.src(paths.server.src + paths.scripts, { base: paths.server.src })
-                .pipe(changed(paths.server.dist))
-                .pipe(plumber())
-                .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
-                .pipe(traceur().on('error', logAndNotify('traceur failed')))
-                .pipe(gulp.dest(paths.server.dist));
-        });
-
-        gulp.task(options.prefix + 'server-common-js', function() {
-            return gulp.src([
-                    paths.common.src && paths.common.src.server && (paths.common.src.server + paths.scripts),
-                    paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
-                    paths.server.common && (paths.server.common + paths.scripts)
-                ].filter(function(elt) { return !!elt; }))
-                .pipe(changed(paths.common.dest))
-                .pipe(plumber())
-                .pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
-                .pipe(traceur().on('error', logAndNotify('traceur failed')))
-                .pipe(gulp.dest(paths.common.dest));
-        });
-    }
-
-    /* Browser Templates */
-
-    var srcBrowserTemplates = [
-        paths.browser.src + paths.browser.templatesEJS + '**/*.ejs',
-        paths.common.src && paths.common.src.browser && (paths.common.src.browser + paths.browser.templatesEJS + '**/*.ejs'),
-        paths.common.src && paths.common.src.common && (paths.common.src.common + paths.browser.templatesEJS + '**/*.ejs'),
-        paths.browser.common && (paths.browser.common + paths.browser.templatesEJS + '**/*.ejs')
-    ].filter(function(elt) { return !!elt; });
-
-    gulp.task(options.prefix + 'browser-ejs', function() {
-        return gulp.src(srcBrowserTemplates)
-            .pipe(ejs({ compileDebug: true, client: true }).on('error', logAndNotify('EJS compile failed')))
-            .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.js'))
-            .pipe(insert.prepend('window.templates = {};'+"\n"))
-            .pipe(gulp.dest(paths.browser.dist));
-    });
-
-    gulp.task(options.prefix + 'browser-ejsmin', function() {
-        return gulp.src(srcBrowserTemplates)
-            .pipe(ejs({ compileDebug: false, client: true }).on('error', logAndNotify('EJS compile failed')))
-            .pipe(concat(pkg.name + /*'-' + pkg.version +*/ '.templates.min.js'))
-            .pipe(insert.prepend('window.templates = {};'+"\n"))
-            .pipe(gulp.dest(paths.browser.dist));
-    });
-
-
-    /* Server Templates */
-
-    var srcServerTemplaces = [
-        paths.server.src + paths.server.templatesEJS,
-        paths.common.src && paths.common.src.server && (paths.common.src.server + paths.server.templatesEJS),
-        paths.common.src && paths.common.src.common && (paths.common.src.common + paths.server.templatesEJS),
-        paths.server.common && (paths.server.common + paths.server.templatesEJS)
-    ].filter(function(elt) { return !!elt; });
-
-    if (paths.server) {
-        gulp.task(options.prefix + 'server-ejs', function() {
-            return gulp.src(srcServerTemplaces)
-                //.pipe(changed(paths.server.dist))
-                //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
-                .pipe(gulp.dest(paths.server.dist));
-        });
-
-        gulp.task(options.prefix + 'server-ejsmin', function() {
-            return gulp.src(srcServerTemplaces)
-                //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('server EJS compile failed')))
-                .pipe(gulp.dest(paths.server.dist));
-        });
-    }
 
 
     /* Images */
@@ -548,33 +304,18 @@ module.exports = function(pkg, gulp, options) {
             });
         }
 
-        gulp.watch([
-                paths.browser.src + paths.scripts,
-                paths.common.src && paths.common.src.browser && (paths.common.src.browser + paths.scripts),
-                paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
-                paths.browser.common && (paths.browser.common + paths.scripts)
-        ].filter(function(elt) { return !!elt; }), [options.prefix + 'browser-js'])
-            .on('change', logfileChanged('browser.scripts'));
-        gulp.watch([ paths.browser.src + '**/*.less', paths.browser.src + '**/*.css' ], [options.prefix + 'browser-styles'])
-            .on('change', logfileChanged('css&less'));
-        gulp.watch(srcBrowserTemplates, [options.prefix + 'browser-ejs'])
-            .on('change', logfileChanged('browser.templatesEJS'));
+        watchTasks.forEach(function(task) {
+            task(logfileChanged);
+        });
+
+
+
+
         gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
             .on('change', logfileChanged('images'));
 
         if (paths.server) {
             daemon.start();
-            gulp.watch(paths.server.src + paths.scripts, [options.prefix + 'server-js'])
-                .on('change', logfileChanged('server.scripts'));
-            gulp.watch(srcServerTemplaces, [options.prefix + 'server-ejs'])
-                .on('change', logfileChanged('server.templatesEJS'));
-
-            gulp.watch([
-                    paths.common.src && paths.common.src.server && (paths.common.src.server + paths.scripts),
-                    paths.common.src && paths.common.src.common && (paths.common.src.common + paths.scripts),
-                    paths.server.common && (paths.server.common + paths.scripts)
-            ].filter(function(elt) { return !!elt; }), [options.prefix + 'server-common-js'])
-                .on('change', logfileChanged('server.commonScripts'));
 
             gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
                 logfileChanged('server')(file);
