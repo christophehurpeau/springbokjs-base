@@ -16,22 +16,23 @@ var applySourceMap = require('vinyl-sourcemaps-apply');
 var browserify = require('browserify');
 var es6ify = require('es6ify');
 
-var changed = require('gulp-changed');
-var concat = require('gulp-concat');
-var csso = require('gulp-csso');
-var ejs = require('gulp-ejs-precompiler');
-var filesize = require('gulp-filesize');
-var gulpif = require('gulp-if');
-var insert = require('gulp-insert');
-var jshint = require('gulp-jshint');
-var less = require('gulp-less');
-var livereload = require('gulp-livereload');
-var plumber = require('gulp-plumber');
+var plugins = require('gulp-load-plugins')();
+var changed = plugins.changed;
+var concat = plugins.concat;
+var csso = plugins.csso;
+var ejs = plugins.ejsPrecompiler;
+var filesize = plugins.filesize;
+var gulpif = plugins.if;
+var insert = plugins.insert;
+var jshint = plugins.jshint;
+var less = plugins.less;
+var livereload = plugins.livereload;
+var plumber = plugins.plumber;
 //var recess = require('gulp-recess');
 //var rename = require('gulp-rename');
-var sourcemaps = require('gulp-sourcemaps');
+var sourcemaps = plugins.sourcemaps;
 //var es6transpiler = require('gulp-es6-transpiler');
-var uglify = require('gulp-uglify');
+var uglify = plugins.uglify;
 //var notify = require('gulp-notify');
 var Notification = require("node-notifier");
 
@@ -471,11 +472,13 @@ module.exports = function(pkg, gulp, options) {
 
     gulp.task(options.prefix + 'browser-images', function() {
         return gulp.src(paths.browser.src + paths.browser.images + '/**/*', { base: paths.browser.src + paths.browser.images })
-            //.pipe(notify("Image: <%= file.relative %>"))
             .pipe(gulp.dest(paths.public + 'images/'));
     });
 
     gulp.task(options.prefix + 'browser-imagesmin', [options.prefix + 'browser-images'], function() {
+        return gulp.src(paths.browser.src + paths.browser.images + '/**/*', { base: paths.browser.src + paths.browser.images })
+            .pipe(plugins.imagemin({ progressive: true }))
+            .pipe(gulp.dest(paths.public + 'images/'));
     });
 
 
