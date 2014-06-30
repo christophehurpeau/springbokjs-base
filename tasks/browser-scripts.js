@@ -10,7 +10,7 @@ var es6ify = require('es6ify');
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
 
-    gulp.task(options.prefix + 'browserifyjs', ['init-config'], function() {
+    gulp.task(options.prefix + 'browserifyjs', [options.prefix + 'init-config'], function() {
         var src = options.src && options.src.js || [];
         if (Array.isArray(src)) {
             if (paths.browser.mainscripts.length > 1) {

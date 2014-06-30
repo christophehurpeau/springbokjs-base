@@ -92,39 +92,6 @@ var init = function(gulp, options) {
     /* Import springbokjs-shim task */
 
     require('springbokjs-shim/gulptask.js')(gulp, paths.browser.dist);
-
-    /* Config */
-    gulp.task('init-config', function(done) {
-        if (!argv.env) {
-            return done();
-        }
-        fs.mkdir(paths.server.configdest)
-            .then(then)
-            .catch(then);
-        function then() {
-            Promise.all([
-                fs.readYamlFile(paths.config + argv.env + '.yml'),
-                fs.readYamlFile(paths.config + 'common.yml'),
-            ]).then(function(results) {
-                var config = Object.assign(results[1] || {}, results[0]);
-                options.browserConfig = objectUtils.mextend({
-                    basepath: '/',
-                }, config.common || {}, config.browser || {}, {
-                    production: !!argv.production,
-                });
-                options.serverConfig = Object.assign(config.common || {}, config.server || {});
-                return fs.writeFile(paths.server.configdest + 'config.js',
-                 'module.exports = ' + JSON.stringify(options.serverConfig, null, 4));
-            })
-            .then(function() {
-                done();
-            })
-            .catch(function(err) {
-                console.error(err);
-                done(err);
-            });
-        }
-    });
 };
 
 module.exports = function(pkg, gulp, options) {
@@ -196,6 +163,39 @@ module.exports = function(pkg, gulp, options) {
     options.paths = paths;
     options.argv = argv;
 
+    /* Config */
+    gulp.task(options.prefix + 'init-config', function(done) {
+        if (!argv.env) {
+            return done();
+        }
+        fs.mkdir(paths.server.configdest)
+            .then(then)
+            .catch(then);
+        function then() {
+            Promise.all([
+                fs.readYamlFile(paths.config + argv.env + '.yml'),
+                fs.readYamlFile(paths.config + 'common.yml'),
+            ]).then(function(results) {
+                var config = Object.assign(results[1] || {}, results[0]);
+                options.browserConfig = objectUtils.mextend({
+                    basepath: '/',
+                }, config.common || {}, config.browser || {}, {
+                    production: !!argv.production,
+                });
+                options.serverConfig = Object.assign(config.common || {}, config.server || {});
+                return fs.writeFile(paths.server.configdest + 'config.js',
+                 'module.exports = ' + JSON.stringify(options.serverConfig, null, 4));
+            })
+            .then(function() {
+                done();
+            })
+            .catch(function(err) {
+                console.error(err);
+                done(err);
+            });
+        }
+    });
+
     /* Init : tasks only applied once */
     init(gulp, options);
 
@@ -257,7 +257,7 @@ module.exports = function(pkg, gulp, options) {
         tasksDefault.push(options.prefix + 'browser-independant-styles');
     }
     if (argv.env) {
-        tasksDefault.unshift('init-config');
+        tasksDefault.unshift(options.prefix + 'init-config');
     }
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
@@ -280,7 +280,7 @@ module.exports = function(pkg, gulp, options) {
 
     /* Watcher */
 
-    gulp.task(options.prefix + 'watch', ['define-port', 'init-config', options.prefix + 'default'], function() {
+    gulp.task(options.prefix + 'watch', ['define-port', options.prefix + 'init-config', options.prefix + 'default'], function() {
         var logfileChanged = function(from) {
             return function(file) {
                 console.log('[watch] ' + from + ': ' + file.path);
