@@ -10,19 +10,21 @@ var es6ify = require('es6ify');
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
 
-    gulp.task(options.prefix + 'browserifyjs', [options.prefix + 'init-config'], function() {
-        var src = options.src && options.src.js || [];
-        if (Array.isArray(src)) {
-            if (paths.browser.mainscripts.length > 1) {
-                gutil.log(gutil.colors.red.bold('the configuration array options.src.js'
-                        + ' should be defined for each of yours mainscripts'));
-            }
-            var oldSrc = src;
-            src = {};
-            src[paths.browser.mainscripts[0]] = oldSrc;
-        }
 
-        return eventStream.merge.apply(eventStream, paths.browser.mainscripts.map(function(mainscript) {
+    var src = options.src && options.src.js || [];
+    var mainscripts = paths.browser.mainscripts;
+    if (Array.isArray(src)) {
+        if (mainscripts.length > 1) {
+            gutil.log(gutil.colors.red.bold('the configuration array options.src.js'
+                    + ' should be defined for each of yours mainscripts'));
+        }
+        var oldSrc = src;
+        src = {};
+        src[mainscripts[0]] = oldSrc;
+    }
+
+    gulp.task(options.prefix + 'browserifyjs', [options.prefix + 'init-config'], function() {
+        return eventStream.merge.apply(eventStream, mainscripts.map(function(mainscript) {
             var currentSrc = src[mainscript] || [];
             currentSrc.push(paths.browser.src + mainscript);
             currentSrc.unshift('node_modules/springbokjs-base/src/init.js');
