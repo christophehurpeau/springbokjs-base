@@ -1,4 +1,5 @@
 /* jshint maxlen: 200 */
+
 require('es6-shim/es6-shim');
 
 var exec = require('child_process').exec;
@@ -90,6 +91,38 @@ var init = function(gulp, options) {
     /* Import springbokjs-shim task */
 
     require('springbokjs-shim/gulptask.js')(gulp, paths.browser.dist);
+};
+
+
+var spawnGulp = !argv.spawnedProcess && function(gulp) {
+    return function() {
+        var spawn = require('child_process').spawn;
+        var childProcess, closed = true;
+
+        var args = process.argv.slice(1);
+        args.push('--spawnedProcess');
+        var spawnChildren = function (e) {
+            // kill previous spawned process
+            if (!closed && childProcess) {
+                childProcess.on('close', function(code, signal) {
+                    setTimeout(spawnChildren, 1000);
+                });
+                childProcess.kill();
+                return;
+            }
+
+            // `spawn` a child `gulp` process linked to the parent `stdio`
+            closed = false;
+            childProcess = spawn(process.argv[0], args, {stdio: 'inherit'});
+            childProcess.on('close', function(code, signal) {
+                console.log('child process terminated due to receipt of signal ' + signal);
+                closed = true;
+            });
+        };
+
+        gulp.watch('gulpfile.js', spawnChildren);
+        spawnChildren();
+    };
 };
 
 module.exports = function(pkg, gulp, options) {
@@ -278,104 +311,86 @@ module.exports = function(pkg, gulp, options) {
 
     /* Watcher */
 
-    gulp.task(options.prefix + 'watch', ['define-port', options.prefix + 'init-config', options.prefix + 'default'], function() {
-        var logfileChanged = function(from) {
-            return function(file) {
-                console.log('[watch] ' + from + ': ' + file.path);
+
+    if (spawnGulp) {
+        gulp.task(options.prefix + 'watch', spawnGulp(gulp));
+    } else {
+        gulp.task(options.prefix + 'watch', ['define-port', options.prefix + 'init-config', options.prefix + 'default'], function() {
+            var logfileChanged = function(from) {
+                return function(file) {
+                    console.log('[watch] ' + from + ': ' + file.path);
+                };
             };
-        };
 
-        var port = startport + (options.multiIndex || 0);
-        var livereloadPort = (argv.startlivereloadPort || (startport + 100)) + (options.multiIndex || 0);
-        console.log('create livereload server on port '+ livereloadPort);
-        var livereloadServer = tinylr({ port: livereloadPort });
-        var changed = function(filePath) {
-            if (filePath.substr(-4) === '.map') {
-                // ignore reload for source map files
-                return;
-            }
-            console.log('[livereload] ' + filePath);
-            livereloadServer.changed({ params: { files: [ filePath ] }});
-        };
+            var port = startport + (options.multiIndex || 0);
+            var livereloadPort = (argv.startlivereloadPort || (startport + 100)) + (options.multiIndex || 0);
+            console.log('create livereload server on port '+ livereloadPort);
+            var livereloadServer = tinylr({ port: livereloadPort });
+            var changed = function(filePath) {
+                if (filePath.substr(-4) === '.map') {
+                    // ignore reload for source map files
+                    return;
+                }
+                console.log('[livereload] ' + filePath);
+                livereloadServer.changed({ params: { files: [ filePath ] }});
+            };
 
-        var daemon;
-        if (paths.server) {
-            daemon = require('springbokjs-daemon').node([
-                '--harmony', paths.server.dist + paths.server.startfile,
-                '--port=' + port,
-                '--livereloadPort=' + livereloadPort
-            ]);
-
-            process.on('exit', function(code) {
-                daemon.stop();
-            });
-        }
-
-        watchTasks.forEach(function(task) {
-            task(logfileChanged);
-        });
-
-
-
-
-        gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
-            .on('change', logfileChanged('images'));
-
-
-        livereloadServer.listen(livereloadPort, function() {
+            var daemon;
             if (paths.server) {
-                daemon.start();
+                daemon = require('springbokjs-daemon').node([
+                    '--harmony', paths.server.dist + paths.server.startfile,
+                    '--port=' + port,
+                    '--livereloadPort=' + livereloadPort
+                ]);
 
-                gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
-                    logfileChanged('server')(file);
-                    daemon.restart();
-                    daemon.once('stdout', function(data) {
-                        var string = data.toString().toLowerCase();
-                        if (string.indexOf('listening') !== -1) {
-                            changed(file.path);
-                            _notify("Server restarted");
-                        }
-                    });
+                process.on('exit', function(code) {
+                    daemon.stop();
+                    livereloadServer.close();
                 });
-            } else {
-                var express = require('express');
-                var app = express();
-                app.use(express.static(paths.public));
-                app.use('/src', express.static('src/'));
-                app.listen(port, gutil.log.bind(null,'static server started, listening on port ' + gutil.colors.magenta(port)));
             }
-        });
 
-        gulp.watch(['data/**/*', paths.browser.dist + '**/*'])
-            .on('change', function(file) {
-                logfileChanged('data&dist')(file);
-                changed(file.path);
+            watchTasks.forEach(function(task) {
+                task(logfileChanged);
             });
-    });
 
 
-    /*
-    gulp.task('staticsvr', function(next) {
-      var staticS = require('node-static'),
-          server = new staticS.Server('./' + dest),
-          port = 8080;
-      require('http').createServer(function (request, response) {
-        request.addListener('end', function () {
-          server.serve(request, response);
-        }).resume();
-      }).listen(port, function() {
-        gutil.log('Server listening on port: ' + gutil.colors.magenta(port));
-        next();
-      });
-    });
 
-    gulp.task('watch', ['staticsvr'], function() {
-      var server = livereload();
-      gulp.watch(dest + '/**').on('change', function(file) {
-          server.changed(file.path);
-      });
-    });
-    */
+
+            gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
+                .on('change', logfileChanged('images'));
+
+
+            livereloadServer.listen(livereloadPort, function() {
+                if (paths.server) {
+                    daemon.start();
+
+                    gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
+                        logfileChanged('server')(file);
+                        daemon.restart();
+                        daemon.once('stdout', function(data) {
+                            var string = data.toString().toLowerCase();
+                            if (string.indexOf('listening') !== -1) {
+                                changed(file.path);
+                                _notify("Server restarted");
+                            }
+                        });
+                    });
+                } else {
+                    var express = require('express');
+                    var app = express();
+                    app.use(express.static(paths.public));
+                    app.use('/src', express.static('src/'));
+                    app.listen(port, gutil.log.bind(null,'static server started, listening on port ' + gutil.colors.magenta(port)));
+                }
+            });
+
+            gulp.watch(['data/**/*', paths.browser.dist + '**/*'])
+                .on('change', function(file) {
+                    logfileChanged('data&dist')(file);
+                    changed(file.path);
+                });
+        });
+    }
 };
 
 module.exports.multi = function(pkg, gulp, multi) {
@@ -391,7 +406,11 @@ module.exports.multi = function(pkg, gulp, multi) {
             return prefix + '-' + task;
         });
         if (task === 'watch') {
-            tasks.unshift('define-port');
+            if (spawnGulp) {
+                tasks = spawnGulp(gulp);
+            } else {
+                tasks.unshift('define-port');
+            }
         }
         gulp.task(task, tasks);
     });
