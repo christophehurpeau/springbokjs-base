@@ -5,6 +5,7 @@ var exec = require('child_process').exec;
 var S = require('springbokjs-utils');
 var objectUtils = require('springbokjs-utils/object');
 var fs = require('springbokjs-utils/fs');
+var tinylr = require('tiny-lr');
 
 var plugins = require('gulp-load-plugins')();
 Object.defineProperty(plugins, 'less', { value: require('gulp-less') });
@@ -21,7 +22,6 @@ Object.defineProperty(plugins, 'if', { value: require('gulp-if') });
 Object.defineProperty(plugins, 'imagemin', { value: require('gulp-imagemin') });
 Object.defineProperty(plugins, 'insert', { value: require('gulp-insert') });
 Object.defineProperty(plugins, 'jshint', { value: require('gulp-jshint') });
-Object.defineProperty(plugins, 'livereload', { value: require('gulp-livereload') });
 Object.defineProperty(plugins, 'notify', { value: require('gulp-notify') });
 Object.defineProperty(plugins, 'plumber', { value: require('gulp-plumber') });
 Object.defineProperty(plugins, 'recess', { value: require('gulp-recess') });
@@ -44,7 +44,6 @@ Object.defineProperty(plugins, 'uglify', { value: require('gulp-uglify') });
 // Object.defineProperty(plugins, 'imagemin', { get: function() { return require('gulp-imagemin'); } });
 // Object.defineProperty(plugins, 'insert', { get: function() { return require('gulp-insert'); } });
 // Object.defineProperty(plugins, 'jshint', { get: function() { return require('gulp-jshint'); } });
-// Object.defineProperty(plugins, 'livereload', { get: function() { return require('gulp-livereload'); } });
 // Object.defineProperty(plugins, 'notify', { get: function() { return require('gulp-notify'); } });
 // Object.defineProperty(plugins, 'plumber', { get: function() { return require('gulp-plumber'); } });
 // Object.defineProperty(plugins, 'recess', { get: function() { return require('gulp-recess'); } });
@@ -56,7 +55,6 @@ Object.defineProperty(plugins, 'uglify', { value: require('gulp-uglify') });
 // Object.defineProperty(plugins, 'util', { get: function() { return require('gulp-util'); } });
 
 var gutil = require('gulp-util');
-var livereload = plugins.livereload;
 //var recess = require('gulp-recess');
 //var rename = require('gulp-rename');
 //var es6transpiler = require('gulp-es6-transpiler');
@@ -112,7 +110,7 @@ module.exports = function(pkg, gulp, options) {
             if (!doNotLog) {
                 if (err && !err.fileName && !err.lineNumber && err.message && err.message !== '[object Object]') {
                     console.warn(err.message);
-                    console.log(typeof(err.message));
+                    console.log(notifyMessage, typeof(err.message), err);
                 } else {
                     gutil.log(err);
                 }
@@ -289,7 +287,16 @@ module.exports = function(pkg, gulp, options) {
 
         var port = startport + (options.multiIndex || 0);
         var livereloadPort = (argv.startlivereloadPort || (startport + 100)) + (options.multiIndex || 0);
-        var livereloadServer = livereload(livereloadPort);
+        console.log('create livereload server on port '+ livereloadPort);
+        var livereloadServer = tinylr({ port: livereloadPort });
+        var changed = function(filePath) {
+            if (filePath.substr(-4) === '.map') {
+                // ignore reload for source map files
+                return;
+            }
+            console.log('[livereload] ' + filePath);
+            livereloadServer.changed({ params: { files: [ filePath ] }});
+        };
 
         var daemon;
         if (paths.server) {
@@ -314,36 +321,35 @@ module.exports = function(pkg, gulp, options) {
         gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
             .on('change', logfileChanged('images'));
 
-        if (paths.server) {
-            daemon.start();
 
-            gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
-                logfileChanged('server')(file);
-                daemon.restart();
-                daemon.once('stdout', function(data) {
-                    var string = data.toString().toLowerCase();
-                    if (string.indexOf('listening') !== -1) {
-                        livereloadServer.changed(file.path);
-                        _notify("Server restarted");
-                    }
+        livereloadServer.listen(livereloadPort, function() {
+            if (paths.server) {
+                daemon.start();
+
+                gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
+                    logfileChanged('server')(file);
+                    daemon.restart();
+                    daemon.once('stdout', function(data) {
+                        var string = data.toString().toLowerCase();
+                        if (string.indexOf('listening') !== -1) {
+                            changed(file.path);
+                            _notify("Server restarted");
+                        }
+                    });
                 });
-            });
-        } else {
-            var express = require('express');
-            var app = express();
-            app.use(express.static(paths.public));
-            app.use('/src', express.static('src/'));
-            app.listen(port, gutil.log.bind(null,'static server started, listening on port ' + gutil.colors.magenta(port)));
-        }
+            } else {
+                var express = require('express');
+                var app = express();
+                app.use(express.static(paths.public));
+                app.use('/src', express.static('src/'));
+                app.listen(port, gutil.log.bind(null,'static server started, listening on port ' + gutil.colors.magenta(port)));
+            }
+        });
 
         gulp.watch(['data/**/*', paths.browser.dist + '**/*'])
             .on('change', function(file) {
                 logfileChanged('data&dist')(file);
-                if (file.path.substr(-4) === '.map') {
-                    // ignore reload for source map files
-                    return;
-                }
-                livereloadServer.changed(file.path);
+                changed(file.path);
             });
     });
 

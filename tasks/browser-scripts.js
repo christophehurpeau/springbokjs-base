@@ -1,6 +1,5 @@
 var through2 = require('through2');
 var gutil = require('gulp-util');
-var eventStream = require('event-stream');
 var path = require('path');
 var applySourceMap = require('vinyl-sourcemaps-apply');
 
@@ -24,7 +23,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     }
 
     gulp.task(options.prefix + 'browserifyjs', [options.prefix + 'init-config'], function() {
-        return eventStream.merge.apply(eventStream, mainscripts.map(function(mainscript) {
+        return gutil.combine(mainscripts.map(function(mainscript) {
             var currentSrc = src[mainscript] || [];
             currentSrc.push(paths.browser.src + mainscript);
             currentSrc.unshift('node_modules/springbokjs-base/src/init.js');

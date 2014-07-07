@@ -1,13 +1,14 @@
-var eventStream = require('event-stream');
 var gutil = require('gulp-util');
 
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
-    var fn, regexp;
+    var compileStyles, regexp;
 
     if (options.stylus) {
         regexp = /\.styl$/;
-        fn = plugins.stylus({ errors: true });
+        compileStyles = function() {
+            return plugins.stylus({ errors: true });
+        };
     } else {
         regexp = /\.less$/;
         var lessOptions = {
@@ -20,7 +21,9 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 production: !!options.argv.production
             },
         };
-        fn = plugins.less(lessOptions).on('error', logAndNotify('Less failed'));
+        compileStyles = function() {
+            return plugins.less(lessOptions).on('error', logAndNotify('Less failed'));
+        };
                 /*.pipe(recess(objectUtils.extend({
                     noOverqualifying: false
                 }, options.recessOptions)).on('error', logAndNotify('Recess failed')))*/
@@ -30,7 +33,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         console.warn('springbokjs-base: browser.independantStyles will be deprecated soon');
         gulp.task(options.prefix + 'browser-independant-styles', function() {
             return gulp.src(paths.browser.independantStyles, { base: paths.browser.src })
-                .pipe(fn)
+                .pipe(compileStyles)
                 .pipe(gulp.dest(paths.browser.dist));
         });
     }
@@ -50,16 +53,17 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
 
 
     gulp.task(options.prefix + 'browser-styles', function() {
-        return eventStream.merge.apply(eventStream, mainstyles.map(function(mainstyle) {
+        return gutil.combine(mainstyles.map(function(mainstyle) {
             var currentSrc = src[mainstyle] || [];
             currentSrc.push(paths.browser.src + paths.browser.styles + mainstyle);
             
             return gulp.src(currentSrc, { base: paths.browser.src + paths.browser.styles })
                 .pipe(plugins.sourcemaps.init())
-                .pipe(plugins.if(regexp, fn))
-                .pipe(plugins.concat(mainstyle.replace(regexp, '') + /* '-' + pkg.version +*/ '.css'))
-            .pipe(plugins.sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src + paths.browser.styles }))
-            .pipe(gulp.dest(paths.browser.dist));
+                    .pipe(plugins.if(regexp, compileStyles()))
+                    .pipe(plugins.concat(mainstyle.replace(regexp, '') + /* '-' + pkg.version +*/ '.css'))
+                .pipe(plugins.sourcemaps.write('maps/' , {
+                                sourceRoot: '/' + paths.browser.src + paths.browser.styles }))
+                .pipe(gulp.dest(paths.browser.dist));
         }));
     });
 
