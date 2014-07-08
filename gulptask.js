@@ -102,6 +102,7 @@ var spawnGulp = !argv.spawnedProcess && function(gulp) {
         var args = process.argv.slice(1);
         args.push('--spawnedProcess');
         var spawnChildren = function (e) {
+            console.log('spawn child');
             // kill previous spawned process
             if (!closed && childProcess) {
                 childProcess.on('close', function(code, signal) {
@@ -120,7 +121,7 @@ var spawnGulp = !argv.spawnedProcess && function(gulp) {
             });
         };
 
-        gulp.watch('gulpfile.js', spawnChildren);
+        //gulp.watch('gulpfile.js', spawnChildren);
         spawnChildren();
     };
 };
@@ -293,7 +294,6 @@ module.exports = function(pkg, gulp, options) {
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
             options.prefix + 'server-js',
-            options.prefix + 'server-common-js',
             options.prefix + 'server-ejs',
         ]);
     }

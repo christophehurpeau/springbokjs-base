@@ -5,7 +5,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         return;
     }
 
-    gulp.task(options.prefix + 'server-buildjs', function() {
+    gulp.task(options.prefix + 'server-buildjs', [options.prefix + 'server-common-js'], function() {
         return gulp.src(paths.server.src + paths.scripts, { base: paths.server.src })
             .pipe(plugins.changed(paths.server.dist))
             .pipe(plugins.plumber())
