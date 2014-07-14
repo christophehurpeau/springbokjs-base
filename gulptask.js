@@ -161,6 +161,7 @@ module.exports = function(pkg, gulp, options) {
         browser: {},
         server: 'src/server/',
         config: 'src/config/',
+        bowerPath: 'bower_components/'
     }, options.paths);
     paths.common = objectUtils.extend({
         src: false,/*{

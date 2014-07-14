@@ -7,7 +7,10 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     if (options.stylus) {
         regexp = /\.styl$/;
         compileStyles = function() {
-            return plugins.stylus({ errors: true });
+            return plugins.stylus({
+                errors: true,
+                paths: [ options.paths.bowerPath ]
+            });
         };
     } else {
         regexp = /\.less$/;
@@ -20,6 +23,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             modifyVars: {
                 production: !!options.argv.production
             },
+            //paths: (file) => { return [ file.dirname, options.paths.bowerPath ]; }
         };
         compileStyles = function() {
             return plugins.less(lessOptions).on('error', logAndNotify('Less failed'));
@@ -56,7 +60,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         return gutil.combine(mainstyles.map(function(mainstyle) {
             var currentSrc = src[mainstyle] || [];
             currentSrc.push(paths.browser.src + paths.browser.styles + mainstyle);
-            
+
             return gulp.src(currentSrc, { base: paths.browser.src + paths.browser.styles })
                 .pipe(plugins.sourcemaps.init())
                     .pipe(plugins.if(regexp, compileStyles()))
@@ -77,9 +81,12 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     });
 
     return function(logfileChanged) {
-        gulp.watch([ paths.browser.src + '**/*.less', paths.browser.src + '**/*.css' ],
-                                        [options.prefix + 'browser-styles'])
-            .on('change', logfileChanged('css&less'));
+        gulp.watch([
+                paths.browser.src + '**/*.styl',
+                paths.browser.src + '**/*.less',
+                paths.browser.src + '**/*.css'
+            ], [options.prefix + 'browser-styles'])
+                .on('change', logfileChanged('css&styles'));
     };
 };
 

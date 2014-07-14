@@ -9,7 +9,6 @@ var es6ify = require('es6ify');
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
 
-
     var src = options.src && options.src.js || [];
     var mainscripts = paths.browser.mainscripts;
     if (Array.isArray(src)) {
