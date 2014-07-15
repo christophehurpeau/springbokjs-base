@@ -8,54 +8,11 @@ var objectUtils = require('springbokjs-utils/object');
 var fs = require('springbokjs-utils/fs');
 var tinylr = require('tiny-lr');
 
-var plugins = require('gulp-load-plugins')();
-Object.defineProperty(plugins, 'less', { value: require('gulp-less') });
-Object.defineProperty(plugins, 'concat', { value: require('gulp-concat') });
-Object.defineProperty(plugins, 'traceur', { value: require('gulp-traceur') });
-Object.defineProperty(plugins, 'changed', { value: require('gulp-changed') });
-Object.defineProperty(plugins, 'closureCompiler', { value: require('gulp-closure-compiler') });
-Object.defineProperty(plugins, 'csso', { value: require('gulp-csso') });
-Object.defineProperty(plugins, 'ejsPrecompiler', { value: require('gulp-ejs-precompiler') });
-Object.defineProperty(plugins, 'es6Transpiler', { value: require('gulp-es6-transpiler') });
-Object.defineProperty(plugins, 'esnext', { value: require('gulp-esnext') });
-Object.defineProperty(plugins, 'filesize', { value: require('gulp-filesize') });
-Object.defineProperty(plugins, 'if', { value: require('gulp-if') });
-Object.defineProperty(plugins, 'imagemin', { value: require('gulp-imagemin') });
-Object.defineProperty(plugins, 'insert', { value: require('gulp-insert') });
-Object.defineProperty(plugins, 'jshint', { value: require('gulp-jshint') });
-Object.defineProperty(plugins, 'notify', { value: require('gulp-notify') });
-Object.defineProperty(plugins, 'plumber', { value: require('gulp-plumber') });
-Object.defineProperty(plugins, 'recess', { value: require('gulp-recess') });
-Object.defineProperty(plugins, 'rename', { value: require('gulp-rename') });
-Object.defineProperty(plugins, 'size', { value: require('gulp-size') });
-Object.defineProperty(plugins, 'sourcemaps', { value: require('gulp-sourcemaps') });
-Object.defineProperty(plugins, 'stylus', { value: require('gulp-stylus') });
-Object.defineProperty(plugins, 'uglify', { value: require('gulp-uglify') });
-// Object.defineProperty(plugins, 'less', { get: function() { return require('gulp-less'); } });
-// Object.defineProperty(plugins, 'concat', { get: function() { return require('gulp-concat'); } });
-// Object.defineProperty(plugins, 'traceur', { get: function() { return require('gulp-traceur'); } });
-// Object.defineProperty(plugins, 'changed', { get: function() { return require('gulp-changed'); } });
-// Object.defineProperty(plugins, 'closureCompiler', { get: function() { return require('gulp-closure-compiler'); } });
-// Object.defineProperty(plugins, 'csso', { get: function() { return require('gulp-csso'); } });
-// Object.defineProperty(plugins, 'ejsPrecompiler', { get: function() { return require('gulp-ejs-precompiler'); } });
-// Object.defineProperty(plugins, 'es6Transpiler', { get: function() { return require('gulp-es6-transpiler'); } });
-// Object.defineProperty(plugins, 'esnext', { get: function() { return require('gulp-esnext'); } });
-// Object.defineProperty(plugins, 'filesize', { get: function() { return require('gulp-filesize'); } });
-// Object.defineProperty(plugins, 'if', { get: function() { return require('gulp-if'); } });
-// Object.defineProperty(plugins, 'imagemin', { get: function() { return require('gulp-imagemin'); } });
-// Object.defineProperty(plugins, 'insert', { get: function() { return require('gulp-insert'); } });
-// Object.defineProperty(plugins, 'jshint', { get: function() { return require('gulp-jshint'); } });
-// Object.defineProperty(plugins, 'notify', { get: function() { return require('gulp-notify'); } });
-// Object.defineProperty(plugins, 'plumber', { get: function() { return require('gulp-plumber'); } });
-// Object.defineProperty(plugins, 'recess', { get: function() { return require('gulp-recess'); } });
-// Object.defineProperty(plugins, 'rename', { get: function() { return require('gulp-rename'); } });
-// Object.defineProperty(plugins, 'size', { get: function() { return require('gulp-size'); } });
-// Object.defineProperty(plugins, 'sourcemaps', { get: function() { return require('gulp-sourcemaps'); } });
-// Object.defineProperty(plugins, 'stylus', { get: function() { return require('gulp-stylus'); } });
-// Object.defineProperty(plugins, 'uglify', { get: function() { return require('gulp-uglify'); } });
-// Object.defineProperty(plugins, 'util', { get: function() { return require('gulp-util'); } });
-
+var plugins = require('gulp-load-plugins')({
+    config: __dirname + '/package.json'
+});
 var gutil = require('gulp-util');
+require('gulp-traceur');
 //var recess = require('gulp-recess');
 //var rename = require('gulp-rename');
 //var es6transpiler = require('gulp-es6-transpiler');
@@ -206,10 +163,11 @@ module.exports = function(pkg, gulp, options) {
             .catch(then);
         function then() {
             Promise.all([
+                fs.readYamlFile(paths.config + 'common.yml').catch(function() { }),
                 fs.readYamlFile(paths.config + argv.env + '.yml'),
-                fs.readYamlFile(paths.config + 'common.yml'),
+                fs.readYamlFile(paths.config + 'local.yml').catch(function() { }),
             ]).then(function(results) {
-                var config = Object.assign(results[1] || {}, results[0]);
+                var config = Object.assign(results[0] || {}, results[1], results[2] || {});
                 options.browserConfig = objectUtils.mextend({
                     basepath: '/',
                 }, config.common || {}, config.browser || {}, {
@@ -300,13 +258,13 @@ module.exports = function(pkg, gulp, options) {
     }
     gulp.task(options.prefix + 'default', tasksDefault);
 
-    gulp.task(options.prefix + 'clean', function() {
-        [paths.server && paths.server.dist, paths.browser.dist].forEach(function(path) {
+    gulp.task(options.prefix + 'clean', function(done) {
+        Promise.all([paths.server && paths.server.dist, paths.browser.dist].map(function(path) {
             if (path) {
                 console.log('Removing ' + path);
-                exec('rm -Rf ' + path);
+                exec('rm -Rf ' + path);//TODO rimraf
             }
-        });
+        })).then(function() { done(); }).catch(done);
     });
 
 
@@ -365,7 +323,11 @@ module.exports = function(pkg, gulp, options) {
                 if (paths.server) {
                     daemon.start();
 
-                    gulp.watch([ paths.server.dist + '**/*', paths.common.dest + '**/*' ]).on('change', function(file) {
+                    gulp.watch([
+                        paths.server.dist + '**/*',
+                        paths.common.dest + '**/*' ,
+                        paths.server.configdest + 'config.js',
+                    ]).on('change', function(file) {
                         logfileChanged('server')(file);
                         daemon.restart();
                         daemon.once('stdout', function(data) {
