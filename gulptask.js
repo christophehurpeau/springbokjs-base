@@ -2,11 +2,11 @@
 
 require('es6-shim/es6-shim');
 
-var exec = require('child_process').exec;
 var S = require('springbokjs-utils');
 var objectUtils = require('springbokjs-utils/object');
 var fs = require('springbokjs-utils/fs');
 var tinylr = require('tiny-lr');
+var rimraf = require('rimraf');
 
 var plugins = require('gulp-load-plugins')({
     config: __dirname + '/package.json'
@@ -259,10 +259,24 @@ module.exports = function(pkg, gulp, options) {
     gulp.task(options.prefix + 'default', tasksDefault);
 
     gulp.task(options.prefix + 'clean', function(done) {
-        Promise.all([paths.server && paths.server.dist, paths.browser.dist].map(function(path) {
+        console.log(paths);
+        Promise.all([
+            paths.server && paths.server.dist,
+            paths.common && paths.common.dist,
+            paths.server && paths.server.configdest && paths.server.configdest + 'config.js',
+            paths.browser.dist,
+        ].map(function(path) {
             if (path) {
                 console.log('Removing ' + path);
-                exec('rm -Rf ' + path);//TODO rimraf
+                return new Promise(function(resolve, reject) {
+                    rimraf(path, function(err) {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(err);
+                        }
+                    });
+                });
             }
         })).then(function() { done(); }).catch(done);
     });
