@@ -167,8 +167,12 @@ module.exports = function(pkg, gulp, options) {
                 fs.readYamlFile(paths.config + argv.env + '.yml'),
                 fs.readYamlFile(paths.config + 'local.yml').catch(function() { }),
             ]).then(function(results) {
-                var config = Object.assign(results[0] || {}, results[1], results[2] || {});
-                options.browserConfig = objectUtils.mextend({
+                var config = results[0] || {};
+                'common browser server'.split(' ').forEach(function(key) {
+                    config[key] = config[key] || {};
+                    Object.assign(config[key], results[1][key] || {}, results[2] && results[2][key] || {});
+                });
+                options.browserConfig = Object.assign({
                     basepath: '/',
                 }, config.common || {}, config.browser || {}, {
                     production: !!argv.production,
