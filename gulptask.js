@@ -146,6 +146,7 @@ module.exports = function(pkg, gulp, options) {
         dist: 'lib/server/',
         startfile: 'server.js',
         templatesEJS: '**/*.ejs',
+        templatesJSX: '**/*.jsx',
         configdest: 'lib/'
     }, S.isString(paths.server) ? { src: paths.server } : paths.server);
 
@@ -257,7 +258,7 @@ module.exports = function(pkg, gulp, options) {
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
             options.prefix + 'server-js',
-            options.prefix + 'server-ejs',
+            options.prefix + 'server-templates',
         ]);
     }
     gulp.task(options.prefix + 'default', tasksDefault);

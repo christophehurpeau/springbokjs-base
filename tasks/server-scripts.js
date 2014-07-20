@@ -1,10 +1,18 @@
 var gutil = require('gulp-util');
+var path = require('path');
 
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
     if (!paths.server) {
         return;
     }
+
+    var sourceRoot = function(file) {
+        var dirname = path.dirname(file.relative) + '/';
+        var slashMatches = file.relative.match(/\//);
+        return '../' + (slashMatches && '../'.repeat(slashMatches.length) || '')
+                         + 'src' + (dirname === './' ? '/' : '/' + dirname);
+    };
 
     gulp.task(options.prefix + 'server-buildjs', [options.prefix + 'server-common-js'], function() {
         return gulp.src(paths.server.src + paths.scripts, { base: paths.server.src })
@@ -16,7 +24,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             .pipe(plugins.sourcemaps.write('.' , {
                 addComment: true,
                 includeContent: false,
-                sourceRoot: process.cwd() + '/' + paths.server.src
+                sourceRoot: sourceRoot
             }))
             .pipe(gulp.dest(paths.server.dist));
     });
@@ -38,7 +46,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                     .pipe(plugins.sourcemaps.write('.' , {
                         addComment: true,
                         includeContent: false,
-                        sourceRoot: process.cwd() + '/' + basesrc
+                        sourceRoot: sourceRoot
                     }))
                     .pipe(gulp.dest(paths.common.dest));
             }));

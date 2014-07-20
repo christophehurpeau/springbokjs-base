@@ -34,6 +34,7 @@
     "gulp-imagemin": "^0.6",
     "gulp-insert": "^0.4",
     "gulp-jshint": "^1.7",
+    "gulp-jsx": "^0.4.0",
     "gulp-less": "git://github.com/christophehurpeau/gulp-less.git#master",
     "gulp-load-plugins": "^0.5",
     "gulp-notify": "^1.4",
