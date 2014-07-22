@@ -10,8 +10,9 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var sourceRoot = function(file) {
         var dirname = path.dirname(file.relative) + '/';
         var slashMatches = file.relative.match(/\//);
-        return '../' + (slashMatches && '../'.repeat(slashMatches.length) || '')
-                         + 'src' + (dirname === './' ? '/' : '/' + dirname);
+        return '../'.repeat(paths.server.dist.replace(/\/+$/, '').split('/').length)
+                         + (slashMatches && '../'.repeat(slashMatches.length) || '')
+                         + paths.server.src.replace(/\/+$/, '') + (dirname === './' ? '/' : '/' + dirname);
     };
 
     gulp.task(options.prefix + 'server-buildjs', [options.prefix + 'server-common-js'], function() {
@@ -19,7 +20,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             .pipe(plugins.changed(paths.server.dist))
             .pipe(plugins.plumber())
             .pipe(plugins.sourcemaps.init())
-                .pipe(plugins.esnext({ }).on('error', logAndNotify('es6transpiler failed')))
+                .pipe(plugins.esnext().on('error', logAndNotify('es6transpiler failed')))
                 .pipe(plugins.traceur().on('error', logAndNotify('traceur failed')))
             .pipe(plugins.sourcemaps.write('.' , {
                 addComment: true,

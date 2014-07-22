@@ -180,7 +180,7 @@ module.exports = function(pkg, gulp, options) {
                 });
                 options.serverConfig = Object.assign(config.common || {}, config.server || {});
                 return fs.writeFile(paths.server.configdest + 'config.js',
-                 'module.exports = ' + JSON.stringify(options.serverConfig, null, 4));
+                            'module.exports = ' + JSON.stringify(options.serverConfig, null, 4));
             })
             .then(function() {
                 done();
@@ -264,7 +264,6 @@ module.exports = function(pkg, gulp, options) {
     gulp.task(options.prefix + 'default', tasksDefault);
 
     gulp.task(options.prefix + 'clean', function(done) {
-        console.log(paths);
         Promise.all([
             paths.server && paths.server.dist,
             paths.common && paths.common.dist,
