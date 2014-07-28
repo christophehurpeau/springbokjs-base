@@ -46,7 +46,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 .pipe(plugins.changed(paths.server.dist/*, { extension: 'js' }*/))
                 .pipe(plugins.sourcemaps.init())
                     .pipe(templateOptions.pipe(templateOptions.pipeOptions || {}).on('error', logAndNotify(templateOptions.suffix.toUpperCase() + ' compile failed')))
-                    .pipe(plugins.esnext({ }).on('error', logAndNotify('es6transpiler failed')))
+                    .pipe(plugins.esnext({ }).on('error', logAndNotify('esnext failed')))
                     .pipe(plugins.traceur().on('error', logAndNotify('traceur failed')))
                 .pipe(plugins.sourcemaps.write('.' , {
                     addComment: true,
