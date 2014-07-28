@@ -24,34 +24,19 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     gulp.task(options.prefix + 'browserifyjs', [options.prefix + 'init-config'], function() {
         return gutil.combine(mainscripts.map(function(mainscript) {
             var currentSrc = src[mainscript] || [];
-            currentSrc.push(paths.browser.src + mainscript);
+            currentSrc.push(paths.browser.src + paths.browser.js + mainscript);
             currentSrc.unshift('node_modules/springbokjs-base/src/init.js');
 
             return gulp.src(currentSrc, { base: paths.browser.src })
                 //.pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
                 .pipe(plugins.sourcemaps.init())
                     .pipe(through2.obj(function(file, encoding, next) {
-                        //TODO fix that !!!!
-                        file.on = function(e, c){
-                            /* jshint ignore:start */
-                            if (e === 'end') process.nextTick(c);
-                            else if (e === 'data') c(file.contents);
-                            else if (e === 'error') ;
-                            else if (e === 'close' || e === 'destroy' || e === 'pause' || e === 'resume') ;
-                            else throw new Error(e);
-                            /* jshint ignore:end */
-                        };
-                        if (file.relative === mainscript) {
-                            var bundle = browserify()
+                        if (file.relative === paths.browser.js + mainscript) {
+                            browserify({ debug: !options.argv.production })
                                 .add(es6ify.runtime)
                                 .transform(es6ify)
-                                .require(file, { entry: file.path, basedir: file.base });
-                            if (options.browserify && options.browserify[mainscript]
-                                         && options.browserify[mainscript].beforeBundle) {
-                                options.browserify[mainscript].beforeBundle(bundle);
-                            }
-                            bundle
-                                .bundle({ debug: true }, function(err, source) {
+                                .require(file, { entry: file.path, basedir: paths.browser.src + paths.browser.js })
+                                .bundle(function(err, source) {
                                     if (err) {
                                         this.emit('error', new gutil.PluginError('task browserifyjs', err));
                                         return next();
@@ -89,9 +74,9 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                             sequences: false
                         },
                         output: { beautify: !!options.argv.production },
-                    }))
+                    }).on('error', logAndNotify('uglify failed')))
                 .pipe(plugins.sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
-                .pipe(gulp.dest(paths.browser.dist));
+                .pipe(gulp.dest(paths.browser.dist + paths.browser.js));
         }));
     });
 

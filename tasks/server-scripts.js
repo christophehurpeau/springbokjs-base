@@ -20,8 +20,13 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             .pipe(plugins.changed(paths.server.dist))
             .pipe(plugins.plumber())
             .pipe(plugins.sourcemaps.init())
-                .pipe(plugins.esnext().on('error', logAndNotify('es6transpiler failed')))
-                .pipe(plugins.traceur().on('error', logAndNotify('traceur failed')))
+                /*.pipe(plugins.sweetjs({
+                    readableNames: true,
+                    //modules: ['./node_modules/springbokjs-base/node_modules/es6-macros']
+                }).on('error', logAndNotify('sweetjs failed')))
+                .pipe(plugins.fixSourcemapFile())
+                */.pipe(plugins.esnext().on('error', logAndNotify(options.prefix + 'server-buildjs: esnext failed')))
+                .pipe(plugins.traceur().on('error', logAndNotify(options.prefix + 'server-buildjs: traceur failed')))
             .pipe(plugins.sourcemaps.write('.' , {
                 addComment: true,
                 includeContent: false,
@@ -38,12 +43,13 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
 
     gulp.task(options.prefix + 'server-common-js', function() {
         return gutil.combine(commonScripts.map(function(basesrc) {
+                var logPrefix = options.prefix + 'server-common-js: ';
                 return gulp.src(basesrc + paths.scripts)
                     .pipe(plugins.changed(paths.common.dest))
                     .pipe(plugins.plumber())
                     .pipe(plugins.sourcemaps.init())
-                        .pipe(plugins.esnext({ }).on('error', logAndNotify('es6transpiler failed')))
-                        .pipe(plugins.traceur().on('error', logAndNotify('traceur failed')))
+                        .pipe(plugins.esnext({ }).on('error',logAndNotify(logPrefix + 'esnext failed')))
+                        .pipe(plugins.traceur().on('error', logAndNotify(logPrefix + 'traceur failed')))
                     .pipe(plugins.sourcemaps.write('.' , {
                         addComment: true,
                         includeContent: false,

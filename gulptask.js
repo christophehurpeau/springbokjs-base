@@ -15,7 +15,6 @@ var gutil = require('gulp-util');
 require('gulp-traceur');
 //var recess = require('gulp-recess');
 //var rename = require('gulp-rename');
-//var es6transpiler = require('gulp-es6-transpiler');
 //var notify = require('gulp-notify');
 var Notification = require("node-notifier");
 
@@ -102,6 +101,9 @@ module.exports = function(pkg, gulp, options) {
                 if (err && !err.fileName && !err.lineNumber && err.message && err.message !== '[object Object]') {
                     console.warn(err.message);
                     console.log(notifyMessage, typeof(err.message), err);
+                } else if (err.stack) {
+                    gutil.log(err.plugin);
+                    gutil.log(err.stack);
                 } else {
                     gutil.log(err);
                 }
@@ -131,7 +133,8 @@ module.exports = function(pkg, gulp, options) {
     paths.browser = objectUtils.extend({
         src: 'src/browser/',
         dist: 'public/dist/',
-        mainscripts: "js/" + pkg.name + ".js",
+        js: 'js/',
+        mainscripts: pkg.name + ".js",
         styles: 'style/',
         mainstyle: 'main.less',
         templatesEJS: 'templates/',
