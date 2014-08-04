@@ -26,7 +26,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
 
     [
         { suffix: 'ejs', path: paths.server.templatesEJS },
-        { suffix: 'jsx', path: paths.server.templatesJSX, pipe: plugins.jsx, pipeOptions: {ignoreDocblock: true, jsx: 'DOM'} }
+        // { suffix: 'jsx', path: paths.server.templatesJSX, pipe: plugins.jsx, pipeOptions: {ignoreDocblock: true, jsx: 'DOM'} }
+        { suffix: 'jsx', path: paths.server.templatesJSX, pipe: plugins.react, pipeOptions: {} }
     ].forEach(function(templateOptions) {
         if (!templateOptions.path) {
             return;
