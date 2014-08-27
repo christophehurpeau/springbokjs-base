@@ -1,6 +1,7 @@
 /* jshint maxlen: 200 */
 
 require('es6-shim/es6-shim');
+require('es6ify');
 
 var S = require('springbokjs-utils');
 var objectUtils = require('springbokjs-utils/object');
