@@ -1,6 +1,7 @@
 /* jshint maxlen: 200 */
 
 require('es6-shim/es6-shim');
+require('gulp-traceur');
 require('es6ify');
 
 var S = require('springbokjs-utils');
@@ -13,7 +14,6 @@ var plugins = require('gulp-load-plugins')({
     config: __dirname + '/package.json'
 });
 var gutil = require('gulp-util');
-require('gulp-traceur');
 //var recess = require('gulp-recess');
 //var rename = require('gulp-rename');
 //var notify = require('gulp-notify');
