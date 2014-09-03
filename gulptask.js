@@ -25,23 +25,30 @@ var argv = require('minimist')(process.argv.slice(2), {
     }
 });
 
-if (argv.port) {
-    console.warn('--port is deprecated, use --startport now');
-    argv.startport = argv.port;
-}
-var startport;
+var startport, startlivereloadPort;
 
 var init = function(gulp, options) {
     var paths = options.paths;
     init = function() {};
     gulp.task('define-port', function(done) {
-        if (startport) {
+        if (startport || argv['socket-folder']) {
             return;
         }
         var portscanner = require('portscanner');
         startport = argv.startport || 3000;
         portscanner.findAPortNotInUse(startport, startport + 50, '127.0.0.1', function(error, port) {
             startport = port;
+            done();
+        });
+    });
+    gulp.task('define-livereload-port', function(done) {
+        if (startlivereloadPort) {
+            return;
+        }
+        var portscanner = require('portscanner');
+        startlivereloadPort = argv.startlivereloadPort || 3100;
+        portscanner.findAPortNotInUse(startlivereloadPort, startlivereloadPort + 50, '127.0.0.1', function(error, port) {
+            startlivereloadPort = port;
             done();
         });
     });
@@ -296,7 +303,7 @@ module.exports = function(pkg, gulp, options) {
     if (spawnGulp) {
         gulp.task(options.prefix + 'watch', spawnGulp(gulp));
     } else {
-        gulp.task(options.prefix + 'watch', ['define-port', options.prefix + 'init-config', options.prefix + 'default'], function() {
+        gulp.task(options.prefix + 'watch', ['define-port', 'define-livereload-port', options.prefix + 'init-config', options.prefix + 'default'], function() {
             var logfileChanged = function(from) {
                 return function(file) {
                     console.log('[watch] ' + from + ': ' + file.path);
@@ -304,7 +311,7 @@ module.exports = function(pkg, gulp, options) {
             };
 
             var port = startport + (options.multiIndex || 0);
-            var livereloadPort = (argv.startlivereloadPort || (startport + 100)) + (options.multiIndex || 0);
+            var livereloadPort = startlivereloadPort + (options.multiIndex || 0);
             console.log('create livereload server on port '+ livereloadPort);
             var livereloadServer = tinylr({ port: livereloadPort });
             var changed = function(filePath) {
@@ -320,8 +327,8 @@ module.exports = function(pkg, gulp, options) {
             if (paths.server) {
                 daemon = require('springbokjs-daemon').node([
                     '--harmony', paths.server.dist + paths.server.startfile,
-                    '--port=' + port,
-                    '--livereloadPort=' + livereloadPort
+                    '--livereloadPort=' + livereloadPort,
+                    argv['socket-folder'] ? '--socket-path=' + argv['socket-folder'] + (options.prefix||'socket') + '.sock' : '--port=' + port,
                 ]);
 
                 process.on('exit', function(code) {
@@ -394,6 +401,7 @@ module.exports.multi = function(pkg, gulp, multi) {
             if (spawnGulp) {
                 tasks = spawnGulp(gulp);
             } else {
+                tasks.unshift('define-livereload-port');
                 tasks.unshift('define-port');
             }
         }
