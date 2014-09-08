@@ -32,7 +32,7 @@ var init = function(gulp, options) {
     init = function() {};
     gulp.task('define-port', function(done) {
         if (startport || argv['socket-folder']) {
-            return;
+            return done();
         }
         var portscanner = require('portscanner');
         startport = argv.startport || 3000;
@@ -43,7 +43,7 @@ var init = function(gulp, options) {
     });
     gulp.task('define-livereload-port', function(done) {
         if (startlivereloadPort) {
-            return;
+            return done();
         }
         var portscanner = require('portscanner');
         startlivereloadPort = argv.startlivereloadPort || 3100;
@@ -325,10 +325,12 @@ module.exports = function(pkg, gulp, options) {
 
             var daemon;
             if (paths.server) {
+                var socketFolder = argv['socket-folder'] && argv['socket-folder'].replace(/\/+$/, '') + '/';
+                var socketName = options.prefix && options.prefix.replace(/[\-_]+$/, '') || 'socket';
                 daemon = require('springbokjs-daemon').node([
                     '--harmony', paths.server.dist + paths.server.startfile,
                     '--livereloadPort=' + livereloadPort,
-                    argv['socket-folder'] ? '--socket-path=' + argv['socket-folder'] + (options.prefix||'socket') + '.sock' : '--port=' + port,
+                    socketFolder ? '--socket-path=' + socketFolder + socketName + '.sock' : '--port=' + port,
                 ]);
 
                 process.on('exit', function(code) {
