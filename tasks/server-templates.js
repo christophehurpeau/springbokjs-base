@@ -27,7 +27,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     [
         { suffix: 'ejs', path: paths.server.templatesEJS },
         // { suffix: 'jsx', path: paths.server.templatesJSX, pipe: plugins.jsx, pipeOptions: {ignoreDocblock: true, jsx: 'DOM'} }
-        { suffix: 'jsx', path: paths.server.templatesJSX, pipe: plugins.react, pipeOptions: {} }
+        { suffix: 'jsx', path: paths.server.templatesJSX, isJs:true, pipe: plugins.react, pipeOptions: {} }
     ].forEach(function(templateOptions) {
         if (!templateOptions.path) {
             return;
@@ -48,8 +48,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 .pipe(plugins.changed(paths.server.dist/*, { extension: 'js' }*/))
                 .pipe(plugins.sourcemaps.init())
                     .pipe(templateOptions.pipe(templateOptions.pipeOptions || {}).on('error', logAndNotify(logPrefix + ' compile failed')))
-                    .pipe(plugins.es6to5(options.es6to5Options)
-                                .on('error', logAndNotify(logPrefix + 'es6to5 failed')))
+                    .pipe(plugins.if(plugins.isJs, plugins.es6to5(options.es6to5Options)
+                                .on('error', logAndNotify(logPrefix + 'es6to5 failed'))))
                 .pipe(plugins.sourcemaps.write('.' , {
                     addComment: true,
                     includeContent: false,

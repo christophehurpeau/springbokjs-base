@@ -8,7 +8,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var jshintReported = {};
     var jshintReporter = function(key) {
         return through2.obj(function (file, enc, next) {
-            if (!file.jshint.success) {
+            if (file.jshint && !file.jshint.success) {
                 if (!jshintReported[key]) {
                     gutil.log(gutil.colors.red('✖'), 'jshint ' + key);
                     logAndNotify('jshint failed :(' +(previousLintJsSuccess[key] === false ? '' : ' Again !'), true)();
@@ -88,7 +88,6 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 .pipe(plugins.jshint.reporter('jshint-stylish'));
         });
     }
-
 
     gulp.task(options.prefix + 'lintjs', lintTasks);
 
