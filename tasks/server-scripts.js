@@ -25,8 +25,10 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                     //modules: ['./node_modules/springbokjs-base/node_modules/es6-macros']
                 }).on('error', logAndNotify('sweetjs failed')))
                 .pipe(plugins.fixSourcemapFile())
-                */.pipe(plugins.esnext().on('error', logAndNotify(options.prefix + 'server-buildjs: esnext failed')))
-                .pipe(plugins.traceur().on('error', logAndNotify(options.prefix + 'server-buildjs: traceur failed')))
+                */.pipe(plugins.esnext({ generator: options.generatorsTranspilationEnabled })
+                            .on('error', logAndNotify(options.prefix + 'server-buildjs: esnext failed')))
+                .pipe(plugins.if(options.traceurEnabled, plugins.traceur({ generators: false })
+                            .on('error', logAndNotify(options.prefix + 'server-buildjs: traceur failed'))))
             .pipe(plugins.sourcemaps.write('.' , {
                 addComment: true,
                 includeContent: false,
@@ -48,8 +50,10 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                     .pipe(plugins.changed(paths.common.dest))
                     .pipe(plugins.plumber())
                     .pipe(plugins.sourcemaps.init())
-                        .pipe(plugins.esnext({ }).on('error',logAndNotify(logPrefix + 'esnext failed')))
-                        .pipe(plugins.traceur().on('error', logAndNotify(logPrefix + 'traceur failed')))
+                        .pipe(plugins.esnext({ generator: options.generatorsTranspilationEnabled })
+                                    .on('error',logAndNotify(logPrefix + 'esnext failed')))
+                        .pipe(plugins.if(options.traceurEnabled, plugins.traceur({ generators: false })
+                                    .on('error', logAndNotify(logPrefix + 'traceur failed'))))
                     .pipe(plugins.sourcemaps.write('.' , {
                         addComment: true,
                         includeContent: false,
