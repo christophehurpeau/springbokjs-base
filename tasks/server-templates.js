@@ -43,12 +43,13 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 return gulp.src(srcServerTemplates)
                     .pipe(gulp.dest(paths.server.dist));
             }
+            var logPrefix = templateOptions.suffix.toUpperCase();
             return gulp.src(srcServerTemplates)
                 .pipe(plugins.changed(paths.server.dist/*, { extension: 'js' }*/))
                 .pipe(plugins.sourcemaps.init())
-                    .pipe(templateOptions.pipe(templateOptions.pipeOptions || {}).on('error', logAndNotify(templateOptions.suffix.toUpperCase() + ' compile failed')))
-                    .pipe(plugins.esnext({ }).on('error', logAndNotify('esnext failed')))
-                    .pipe(plugins.traceur().on('error', logAndNotify('traceur failed')))
+                    .pipe(templateOptions.pipe(templateOptions.pipeOptions || {}).on('error', logAndNotify(logPrefix + ' compile failed')))
+                    .pipe(plugins.es6to5(options.es6to5Options)
+                                .on('error', logAndNotify(logPrefix + 'es6to5 failed')))
                 .pipe(plugins.sourcemaps.write('.' , {
                     addComment: true,
                     includeContent: false,

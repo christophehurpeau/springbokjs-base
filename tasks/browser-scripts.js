@@ -28,7 +28,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             currentSrc.unshift('node_modules/springbokjs-base/src/init.js');
 
             return gulp.src(currentSrc, { base: paths.browser.src })
-                //.pipe(es6transpiler({ }).on('error', logAndNotify('es6transpiler failed')))
+                //.pipe(plugins.es6to5())
                 .pipe(plugins.sourcemaps.init())
                     .pipe(through2.obj(function(file, encoding, next) {
                         if (file.relative === paths.browser.js + mainscript) {

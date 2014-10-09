@@ -1,8 +1,6 @@
 /* jshint maxlen: 200 */
 
 require('es6-shim/es6-shim');
-//require('gulp-traceur');
-//require('es6ify');
 
 var S = require('springbokjs-utils');
 var objectUtils = require('springbokjs-utils/object');
@@ -122,6 +120,11 @@ module.exports = function(pkg, gulp, options) {
 
     /* OPTIONS */
 
+    options.es6to5Options = {};
+    if (!options.generatorsTranspilationEnabled) {
+        options.es6to5Options.blacklist = [ 'generators' ];
+    }
+
     var paths = objectUtils.extend({
         scripts: "**/*.js",
         'public': 'public/',
@@ -162,9 +165,6 @@ module.exports = function(pkg, gulp, options) {
     }, S.isString(paths.server) ? { src: paths.server } : paths.server);
 
     options.prefix = options.prefix || '';
-    if (options.traceurEnabled === undefined) {
-        options.traceurEnabled = true;
-    }
     options.paths = paths;
     options.argv = argv;
 
