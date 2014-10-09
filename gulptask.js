@@ -274,6 +274,8 @@ module.exports = function(pkg, gulp, options) {
     }
     gulp.task(options.prefix + 'default', tasksDefault);
 
+    gulp.task(options.prefix + 'lint', [options.prefix + 'lintjs']);
+
     gulp.task(options.prefix + 'clean', function(done) {
         Promise.all([
             paths.server && paths.server.dist,
@@ -395,7 +397,7 @@ module.exports.multi = function(pkg, gulp, multi) {
         options.multiIndex = index;
         module.exports(pkg, gulp, options);
     });
-    ['default', 'watch', 'clean'].forEach(function(task) {
+    ['default', 'watch', 'clean', 'lint'].forEach(function(task) {
         var tasks = prefixes.map(function(prefix) {
             return prefix + '-' + task;
         });

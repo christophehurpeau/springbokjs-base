@@ -57,6 +57,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     options.jshintServerOptions = Object.assign(options.jshintServerOptions || {},
                                                         {"browser": false}, jshintOptions);
 
+    var lintTasks = [options.prefix + 'browser-lintjs'];
+
     gulp.task(options.prefix + 'browser-lintjs', function() {
         return gulp.src([
                 paths.browser.src + paths.scripts,
@@ -71,6 +73,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     });
 
     if (paths.server) {
+        lintTasks.push(options.prefix + 'server-lintjs');
         gulp.task(options.prefix + 'server-lintjs', function() {
             return gulp.src([
                     'gulpfile.js',
@@ -85,4 +88,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 .pipe(plugins.jshint.reporter('jshint-stylish'));
         });
     }
+
+
+    gulp.task(options.prefix + 'lintjs', lintTasks);
+
 };
