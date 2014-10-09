@@ -162,6 +162,9 @@ module.exports = function(pkg, gulp, options) {
     }, S.isString(paths.server) ? { src: paths.server } : paths.server);
 
     options.prefix = options.prefix || '';
+    if (options.traceurEnabled === undefined) {
+        options.traceurEnabled = true;
+    }
     options.paths = paths;
     options.argv = argv;
 
