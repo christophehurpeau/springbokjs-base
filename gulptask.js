@@ -359,6 +359,8 @@ module.exports = function(pkg, gulp, options) {
                 if (paths.server) {
                     daemon.start();
 
+                    gulp.watch(paths.config + '*.yml', [options.prefix + 'init-config']);
+
                     gulp.watch([
                         paths.server.dist + '**/*',
                         paths.common.dest + '**/*' ,
