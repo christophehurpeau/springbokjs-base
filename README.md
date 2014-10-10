@@ -48,15 +48,15 @@ You can configure with the options below, the value displayed is the default:
         scripts: "**/*.js",
         'public': 'public/',
         config: 'src/config/',
-        bowerPath: 'bower_components/',
+        stylesIncludePath: ['bower_components/'],
         common: {
             src: false,
             dest: 'lib/common/', // destination for server-side.
         },
-        
+
         // can be false, a string (the src option)
         server: 'src/server/',
-        
+
         // or an object
         server: {
             src: 'src/server/',
@@ -67,8 +67,8 @@ You can configure with the options below, the value displayed is the default:
             templatesJSX: '**/*.jsx',
             configdest: 'lib/'
         }
-        
-        
+
+
         browser: {
             src: 'src/browser/',
             dist: 'public/dist/',

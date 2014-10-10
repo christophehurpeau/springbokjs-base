@@ -1,4 +1,4 @@
-var gutil = require('gulp-util');
+var merge = require('merge-stream');
 var path = require('path');
 
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
@@ -7,12 +7,12 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         return;
     }
 
-    var sourceRoot = function(file) {
-        var dirname = path.dirname(file.relative) + '/';
+    var sourceRoot = function(src, dest, includeDirname, file) {
+        var dirname = includeDirname && path.dirname(file.relative) + '/';
         var slashMatches = file.relative.match(/\//);
-        return '../'.repeat(paths.server.dist.replace(/\/+$/, '').split('/').length)
+        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length)
                          + (slashMatches && '../'.repeat(slashMatches.length) || '')
-                         + paths.server.src.replace(/\/+$/, '') + (dirname === './' ? '/' : '/' + dirname);
+                         + src.replace(/\/+$/, '') + (!includeDirname || dirname === './' ? '/' : '/' + dirname);
     };
 
     gulp.task(options.prefix + 'server-buildjs', [options.prefix + 'server-common-js'], function() {
@@ -26,7 +26,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             .pipe(plugins.sourcemaps.write('.' , {
                 addComment: true,
                 includeContent: false,
-                sourceRoot: sourceRoot
+                sourceRoot: sourceRoot.bind(null, paths.server.src, paths.server.dist, true)
             }))
             .pipe(gulp.dest(paths.server.dist));
     });
@@ -38,21 +38,21 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     ].filter(function(elt) { return !!elt; });
 
     gulp.task(options.prefix + 'server-common-js', function() {
-        return gutil.combine(commonScripts.map(function(basesrc) {
-                var logPrefix = options.prefix + 'server-common-js: ';
-                return gulp.src(basesrc + paths.scripts)
-                    .pipe(plugins.changed(paths.common.dest))
-                    .pipe(plugins.plumber())
-                    .pipe(plugins.sourcemaps.init())
-                        .pipe(plugins.es6to5(options.es6to5Options)
-                                    .on('error', logAndNotify(logPrefix + 'es6to5 failed')))
-                    .pipe(plugins.sourcemaps.write('.' , {
-                        addComment: true,
-                        includeContent: false,
-                        sourceRoot: sourceRoot
-                    }))
-                    .pipe(gulp.dest(paths.common.dest));
-            }));
+        var logPrefix = options.prefix + 'server-common-js: ';
+        return merge.apply(merge, commonScripts.map(function(basesrc) {
+            return gulp.src(basesrc + paths.scripts)
+                .pipe(plugins.changed(paths.common.dest))
+                .pipe(plugins.plumber())
+                .pipe(plugins.sourcemaps.init())
+                    .pipe(plugins.es6to5(options.es6to5Options)
+                                .on('error', logAndNotify(logPrefix + 'es6to5 failed')))
+                .pipe(plugins.sourcemaps.write('.' , {
+                    addComment: true,
+                    includeContent: false,
+                    sourceRoot: sourceRoot.bind(null, basesrc, paths.common.dest, false)
+                }))
+                .pipe(gulp.dest(paths.common.dest));
+        }));
     });
 
     return function(logfileChanged) {

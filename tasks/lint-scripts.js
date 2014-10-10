@@ -1,3 +1,4 @@
+/* jshint maxlen: 200 */
 var through2 = require('through2');
 var gutil = require('gulp-util');
 
@@ -52,10 +53,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         "eqnull": true,
         "node": true
     }, options.jshintOptions || {});
-    options.jshintBrowserOptions = Object.assign(options.jshintBrowserOptions || {},
-                                                        {"browser": true}, jshintOptions);
-    options.jshintServerOptions = Object.assign(options.jshintServerOptions || {},
-                                                        {"browser": false}, jshintOptions);
+    options.jshintBrowserOptions = Object.assign({"browser": true}, jshintOptions, options.jshintBrowserOptions || {});
+    options.jshintServerOptions = Object.assign({"browser": false}, jshintOptions, options.jshintServerOptions || {});
 
     var lintTasks = [options.prefix + 'browser-lintjs'];
 

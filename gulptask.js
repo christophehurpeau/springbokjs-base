@@ -14,8 +14,7 @@ var plugins = require('gulp-load-plugins')({
 var gutil = require('gulp-util');
 //var recess = require('gulp-recess');
 //var rename = require('gulp-rename');
-//var notify = require('gulp-notify');
-var Notification = require("node-notifier");
+var notifier = require("node-notifier");
 
 var argv = require('minimist')(process.argv.slice(2), {
     alias: {
@@ -89,7 +88,6 @@ var spawnGulp = !argv.spawnedProcess && function(gulp) {
 };
 
 module.exports = function(pkg, gulp, options) {
-    var notifier = new Notification();
     var _notify = function(title, message) {
         notifier.notify({
             // https://github.com/mikaelbr/node-notifier/blob/master/lib/notifiers/notify-send.js
@@ -131,7 +129,7 @@ module.exports = function(pkg, gulp, options) {
         browser: {},
         server: 'src/server/',
         config: 'src/config/',
-        bowerPath: 'bower_components/'
+        stylesIncludePath: ['bower_components/']
     }, options.paths);
     paths.common = objectUtils.extend({
         src: false,/*{

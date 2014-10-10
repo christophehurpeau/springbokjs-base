@@ -9,7 +9,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         compileStyles = function() {
             return plugins.stylus({
                 errors: true,
-                paths: [ options.paths.bowerPath ]
+                paths: options.paths.stylesIncludePath
             });
         };
     } else {

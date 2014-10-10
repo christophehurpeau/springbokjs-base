@@ -1,10 +1,11 @@
+/* jshint maxlen: 200 */
 var through2 = require('through2');
 var gutil = require('gulp-util');
 var path = require('path');
 var applySourceMap = require('vinyl-sourcemaps-apply');
 
 var browserify = require('browserify');
-var es6ify = require('es6ify');
+var es6to5ify = require('6to5-browserify');
 
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
@@ -33,8 +34,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                     .pipe(through2.obj(function(file, encoding, next) {
                         if (file.relative === paths.browser.js + mainscript) {
                             browserify({ debug: !options.argv.production })
-                                .add(es6ify.runtime)
-                                .transform(es6ify)
+                                .transform(es6to5ify)
                                 .require(file, { entry: file.path, basedir: paths.browser.src + paths.browser.js })
                                 .bundle(function(err, source) {
                                     if (err) {
