@@ -11,10 +11,7 @@
   "homepage": "http://springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/christophehurpeau/springbokjs-base.git"
-  },
+  "repository": "git://github.com/christophehurpeau/springbokjs-base.git",
   "dependencies": {
     "browserify": "^5.12",
     "connect-livereload": "^0.4.0",
