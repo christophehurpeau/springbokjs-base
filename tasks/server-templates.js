@@ -25,9 +25,17 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var watchPaths = [];
 
     [
-        { suffix: 'ejs', path: paths.server.templatesEJS },
-        // { suffix: 'jsx', path: paths.server.templatesJSX, pipe: plugins.jsx, pipeOptions: {ignoreDocblock: true, jsx: 'DOM'} }
-        { suffix: 'jsx', path: paths.server.templatesJSX, isJs: true, pipe: plugins.react, pipeOptions: {} }
+        {
+            suffix: 'ejs',
+            path: paths.server.templatesEJS
+        },
+        {
+            suffix: 'jsx',
+            path: paths.server.templatesJSX,
+            isJs: true,
+            pipe: plugins.react,
+            pipeOptions: { domPragma: options.reactDomPragma || '$.create' }
+        }
     ].forEach(function(templateOptions) {
         if (!templateOptions.path) {
             return;
