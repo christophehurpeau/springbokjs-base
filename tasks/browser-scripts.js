@@ -73,7 +73,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                             comparisons: true,
                             sequences: false
                         },
-                        output: { beautify: !!options.argv.production },
+                        output: { beautify: !options.argv.production },
                     }).on('error', logAndNotify('uglify failed')))
                 .pipe(plugins.sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
                 .pipe(gulp.dest(paths.browser.dist + paths.browser.js));
