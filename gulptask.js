@@ -125,6 +125,8 @@ module.exports = function(pkg, gulp, options) {
 
     var paths = objectUtils.extend({
         scripts: "**/*.js",
+        templatesEJS: '**/*.ejs',
+        templatesJSX: '**/*.jsx',
         'public': 'public/',
         browser: {},
         server: 'src/server/',
@@ -145,8 +147,8 @@ module.exports = function(pkg, gulp, options) {
         js: 'js/',
         mainscripts: pkg.name + ".js",
         styles: 'style/',
+        templates: 'templates/',
         mainstyle: 'main.less',
-        templatesEJS: 'templates/',
         images: "images",
     }, paths.browser);
 
@@ -157,8 +159,6 @@ module.exports = function(pkg, gulp, options) {
         common: 'src/common/',
         dist: 'lib/server/',
         startfile: 'server.js',
-        templatesEJS: '**/*.ejs',
-        templatesJSX: '**/*.jsx',
         configdest: 'lib/'
     }, S.isString(paths.server) ? { src: paths.server } : paths.server);
 
@@ -180,25 +180,42 @@ module.exports = function(pkg, gulp, options) {
                 fs.readYamlFile(paths.config + argv.env + '.yml'),
                 fs.readYamlFile(paths.config + 'local.yml').catch(function() { }),
             ]).then(function(results) {
-                var config = results[0] || {};
-                'common browser server'.split(' ').forEach(function(key) {
-                    config[key] = config[key] || {};
-                    Object.assign(config[key], results[1][key] || {}, results[2] && results[2][key] || {});
+                var config = {};
+                var includes = results[0].includes || [];
+                if (results[1].include) {
+                    includes.push.apply(includes, results[1].include);
+                }
+                if (results[2] && results[2].include) {
+                    includes.push.apply(includes, results[2].include);
+                }
+                return Promise.all(includes.map(function(file) {
+                    return fs.readYamlFile(paths.config + file + '.yml');
+                })).then(function(configs) {
+                    configs.push.apply(configs, results);
+                    'common browser server'.split(' ').forEach(function(key) {
+                        config[key] = config[key] || {};
+                        configs.forEach(function(configPart) {
+                            if (configPart && configPart[key]) {
+                                Object.assign(config[key], configPart[key]);
+                            }
+                        });
+
+                    });
+                    options.browserConfig = Object.assign({
+                        basepath: '/',
+                    }, config.common || {}, config.browser || {});
+
+                    options.serverConfig = Object.assign(config.common || {}, config.server || {});
+                    return fs.writeFile(paths.server.configdest + 'config.js',
+                                'module.exports = ' + JSON.stringify(options.serverConfig, null, 4));
                 });
-                options.browserConfig = Object.assign({
-                    basepath: '/',
-                }, config.common || {}, config.browser || {}, {
-                    production: !!argv.production,
-                });
-                options.serverConfig = Object.assign(config.common || {}, config.server || {});
-                return fs.writeFile(paths.server.configdest + 'config.js',
-                            'module.exports = ' + JSON.stringify(options.serverConfig, null, 4));
+
             })
             .then(function() {
                 done();
             })
             .catch(function(err) {
-                console.error(err);
+                console.error(err.stack || err.message || err);
                 done(err);
             });
         }
@@ -258,7 +275,7 @@ module.exports = function(pkg, gulp, options) {
     var tasksDefault = [
         options.prefix + 'browser-styles',
         options.prefix + 'browser-js',
-        options.prefix + 'browser-ejs',
+        options.prefix + 'browser-templates',
         options.prefix + 'browser-images'
     ];
     if (paths.browser.independantStyles) {

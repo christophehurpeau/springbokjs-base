@@ -27,11 +27,11 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     [
         {
             suffix: 'ejs',
-            path: paths.server.templatesEJS
+            path: paths.templatesEJS
         },
         {
             suffix: 'jsx',
-            path: paths.server.templatesJSX,
+            path: paths.templatesJSX,
             isJs: true,
             pipe: plugins.react,
             pipeOptions: { domPragma: options.reactDomPragma || '$.create' }
@@ -64,10 +64,6 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                     sourceRoot: sourceRoot
                 }))
                 .pipe(gulp.dest(paths.server.dist));
-        });
-
-        gulp.task(taskName + 'min', [taskName], function(done) {
-            done();
         });
     });
 

@@ -68,7 +68,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                         mangle: false,
                         compress: {
                             warnings: false,
-                            global_defs: options.browserConfig,// jshint ignore:line
+                            global_defs: options.browserConfig, // jshint ignore:line
                             unsafe: false, //!oldIe
                             comparisons: true,
                             sequences: false
@@ -78,18 +78,6 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 .pipe(plugins.sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
                 .pipe(gulp.dest(paths.browser.dist + paths.browser.js));
         }));
-    });
-
-    gulp.task(options.prefix + 'jsmin', [options.prefix + 'browserifyjs'], function() {
-        gulp.src(paths.browser.dist + '*.js')
-            .pipe(plugins.filesize())
-            .pipe(plugins.uglify())
-            //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.min.js'))
-            .pipe(plugins.rename(function (path) {
-                path.suffix += '-' + pkg.version + '.min';
-            }))
-            .pipe(gulp.dest(paths.browser.dist))
-            .pipe(plugins.filesize());
     });
 
     return function(logfileChanged) {
