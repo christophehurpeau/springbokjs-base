@@ -181,7 +181,7 @@ module.exports = function(pkg, gulp, options) {
                 fs.readYamlFile(paths.config + 'local.yml').catch(function() { }),
             ]).then(function(results) {
                 var config = {};
-                var includes = results[0].includes || [];
+                var includes = results[0] && results[0].includes || [];
                 if (results[1].include) {
                     includes.push.apply(includes, results[1].include);
                 }
