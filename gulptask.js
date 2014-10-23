@@ -417,7 +417,7 @@ module.exports.multi = function(pkg, gulp, multi) {
         options.multiIndex = index;
         module.exports(pkg, gulp, options);
     });
-    ['default', 'watch', 'clean', 'lint'].forEach(function(task) {
+    'default watch clean lint'.split(' ').forEach(function(task) {
         var tasks = prefixes.map(function(prefix) {
             return prefix + '-' + task;
         });
