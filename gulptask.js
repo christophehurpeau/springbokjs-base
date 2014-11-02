@@ -204,6 +204,7 @@ module.exports = function(pkg, gulp, options) {
                     options.browserConfig = Object.assign({
                         basepath: '/',
                     }, config.common || {}, config.browser || {});
+                    options.browserConfig.webpath = options.browserConfig.webpath || options.browserConfig.basepath;
 
                     options.serverConfig = Object.assign(config.common || {}, config.server || {});
                     return fs.writeFile(paths.server.configdest + 'config.js',
