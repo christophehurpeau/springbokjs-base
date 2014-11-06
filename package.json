@@ -7,7 +7,7 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.25.3",
+  "version": "0.25.4",
   "homepage": "http://springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -28,7 +28,7 @@
     "gulp-if": "^1.2",
     "gulp-imagemin": "^1.2",
     "gulp-insert": "^0.4",
-    "gulp-jshint": "^1.8",
+    "gulp-jshint": "^1.9",
     "gulp-less": "git://github.com/christophehurpeau/gulp-less.git#master",
     "gulp-load-plugins": "^0.7",
     "gulp-plumber": "^0.6",
