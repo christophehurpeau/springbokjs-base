@@ -1,5 +1,4 @@
 var merge = require('merge-stream');
-var path = require('path');
 
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
@@ -7,12 +6,11 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         return;
     }
 
-    var sourceRoot = function(src, dest, includeDirname, file) {
-        var dirname = includeDirname && path.dirname(file.relative) + '/';
+    var sourceRoot = function(src, dest, file) {
         var slashMatches = file.relative.match(/\//);
-        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length)
+        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length +1)
                          + (slashMatches && '../'.repeat(slashMatches.length) || '')
-                         + src.replace(/\/+$/, '') + (!includeDirname || dirname === './' ? '/' : '/' + dirname);
+                         + src.replace(/\/+$/, '');
     };
 
     gulp.task(options.prefix + 'server-buildjs', [options.prefix + 'server-common-js'], function() {
@@ -26,7 +24,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             .pipe(plugins.sourcemaps.write('.' , {
                 addComment: true,
                 includeContent: false,
-                sourceRoot: sourceRoot.bind(null, paths.server.src, paths.server.dist, true)
+                sourceRoot: sourceRoot.bind(null, paths.server.src, paths.server.dist)
             }))
             .pipe(gulp.dest(paths.server.dist));
     });
@@ -49,7 +47,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 .pipe(plugins.sourcemaps.write('.' , {
                     addComment: true,
                     includeContent: false,
-                    sourceRoot: sourceRoot.bind(null, basesrc, paths.common.dest, false)
+                    sourceRoot: sourceRoot.bind(null, basesrc, paths.common.dest)
                 }))
                 .pipe(gulp.dest(paths.common.dest));
         }));
