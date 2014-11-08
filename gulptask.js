@@ -3,7 +3,6 @@
 require('es6-shim/es6-shim');
 
 var S = require('springbokjs-utils');
-var objectUtils = require('springbokjs-utils/object');
 var fs = require('springbokjs-utils/fs');
 var tinylr = require('tiny-lr');
 var rimraf = require('rimraf');
@@ -12,13 +11,13 @@ var plugins = require('gulp-load-plugins')({
     config: __dirname + '/package.json'
 });
 var gutil = require('gulp-util');
-//var recess = require('gulp-recess');
-//var rename = require('gulp-rename');
-var notifier = require("node-notifier");
+// var recess = require('gulp-recess');
+// var rename = require('gulp-rename');
+var notifier = require('node-notifier');
 
 var argv = require('minimist')(process.argv.slice(2), {
     alias: {
-        'production': 'prod'
+        production: 'prod'
     }
 });
 
@@ -44,7 +43,7 @@ var init = function(gulp, options) {
         }
         var portscanner = require('portscanner');
         startlivereloadPort = argv.startlivereloadPort || 3100;
-        portscanner.findAPortNotInUse(startlivereloadPort, startlivereloadPort + 50, '127.0.0.1', function(error, port) {
+        portscanner.findAPortNotInUse(startlivereloadPort, startlivereloadPort + 50, '127.0.0.1', function(err, port) {
             startlivereloadPort = port;
             done();
         });
@@ -62,7 +61,7 @@ var spawnGulp = !argv.spawnedProcess && function(gulp) {
 
         var args = process.argv.slice(1);
         args.push('--spawnedProcess');
-        var spawnChildren = function (e) {
+        var spawnChildren = function(e) {
             console.log('spawn child');
             // kill previous spawned process
             if (!closed && childProcess) {
@@ -75,14 +74,14 @@ var spawnGulp = !argv.spawnedProcess && function(gulp) {
 
             // `spawn` a child `gulp` process linked to the parent `stdio`
             closed = false;
-            childProcess = spawn(process.argv[0], args, {stdio: 'inherit'});
+            childProcess = spawn(process.argv[0], args, { stdio: 'inherit' });
             childProcess.on('close', function(code, signal) {
                 console.log('child process terminated due to receipt of signal ' + signal);
                 closed = true;
             });
         };
 
-        //gulp.watch('gulpfile.js', spawnChildren);
+        // gulp.watch('gulpfile.js', spawnChildren);
         spawnChildren();
     };
 };
@@ -93,7 +92,7 @@ module.exports = function(pkg, gulp, options) {
             // https://github.com/mikaelbr/node-notifier/blob/master/lib/notifiers/notify-send.js
             message: message === undefined ? title : message,
             title: title || 'Gulp',
-            //expire: 2000,
+            // expire: 2000,
             hint: 'int:transient:1'
         });
     };
@@ -104,7 +103,7 @@ module.exports = function(pkg, gulp, options) {
             if (!doNotLog) {
                 if (err && !err.fileName && !err.lineNumber && err.message && err.message !== '[object Object]') {
                     console.warn(err.message);
-                    console.log(notifyMessage, typeof(err.message), err);
+                    console.log(notifyMessage, typeof err.message, err);
                 } else if (err.stack) {
                     gutil.log(err.plugin);
                     gutil.log(err.stack);
@@ -123,17 +122,17 @@ module.exports = function(pkg, gulp, options) {
         options.es6to5Options.blacklist = [ 'generators' ];
     }
 
-    var paths = objectUtils.extend({
-        scripts: "**/*.js",
+    var paths = Object.assign({
+        scripts: '**/*.js',
         templatesEJS: '**/*.ejs',
         templatesJSX: '**/*.jsx',
-        'public': 'public/',
+        public: 'public/',
         browser: {},
         server: 'src/server/',
         config: 'src/config/',
         stylesIncludePath: ['bower_components/']
     }, options.paths);
-    paths.common = objectUtils.extend({
+    paths.common = Object.assign({
         src: false,/*{
             browser: 'src/common/browser/',
             common: 'src/common/common/',
@@ -141,21 +140,21 @@ module.exports = function(pkg, gulp, options) {
         }*/
         dest: 'lib/common/', // destination for server-side.
     }, paths.common);
-    paths.browser = objectUtils.extend({
+    paths.browser = Object.assign({
         src: 'src/browser/',
         dist: 'public/dist/',
         js: 'js/',
-        mainscripts: pkg.name + ".js",
+        mainscripts: pkg.name + '.js',
         styles: 'style/',
         templates: 'templates/',
         mainstyle: 'main.less',
-        images: "images",
+        images: 'images',
     }, paths.browser);
 
     if (!Array.isArray(paths.browser.mainscripts)) {
         paths.browser.mainscripts = [ paths.browser.mainscripts ];
     }
-    paths.server = paths.server !== false && objectUtils.extend({
+    paths.server = paths.server !== false && Object.assign({
         common: 'src/common/',
         dist: 'lib/server/',
         startfile: 'server.js',
