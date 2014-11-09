@@ -206,8 +206,13 @@ module.exports = function(pkg, gulp, options) {
                     options.browserConfig.webpath = options.browserConfig.webpath || options.browserConfig.basepath;
 
                     options.serverConfig = Object.assign(config.common || {}, config.server || {});
-                    return fs.writeFile(paths.server.configdest + 'config.js',
-                                'module.exports = ' + JSON.stringify(options.serverConfig, null, 4));
+                    return Promise.all([
+                        fs.writeFile(paths.server.configdest + 'config.js',
+                                'module.exports = ' + JSON.stringify(options.serverConfig, null, 4) + ';'),
+                        fs.writeFile(paths.browser.src + 'config-browser.js',
+                                '// Auto generated file from yaml\n' +
+                                'module.exports = ' + JSON.stringify(options.browserConfig, null, 4) + ';'),
+                    ]);
                 });
 
             })
