@@ -7,7 +7,7 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.27.0",
+  "version": "0.27.1",
   "homepage": "http://springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
@@ -35,6 +35,7 @@
     "gulp-react": "git://github.com/christophehurpeau/gulp-react.git#8a5a9a2c20757da5c888258c84944bf7a65eb8b0",
     "gulp-recess": "^1.1",
     "gulp-rename": "^1.2",
+    "gulp-set-contents": "^1.0",
     "gulp-size": "^1.1",
     "gulp-sourcemaps": "^1.2",
     "gulp-stylus": "^1.3",

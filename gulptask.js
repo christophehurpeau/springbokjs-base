@@ -171,50 +171,50 @@ module.exports = function(pkg, gulp, options) {
             return done();
         }
         fs.mkdir(paths.server.configdest)
-            .then(then)
-            .catch(then);
-        function then() {
-            Promise.all([
-                fs.readYamlFile(paths.config + 'common.yml').catch(function() { }),
-                fs.readYamlFile(paths.config + argv.env + '.yml'),
-                fs.readYamlFile(paths.config + 'local.yml').catch(function() { }),
-            ]).then(function(results) {
-                var config = {};
-                var includes = results[0] && results[0].includes || [];
-                if (results[1].include) {
-                    includes.push.apply(includes, results[1].include);
-                }
-                if (results[2] && results[2].include) {
-                    includes.push.apply(includes, results[2].include);
-                }
-                return Promise.all(includes.map(function(file) {
-                    return fs.readYamlFile(paths.config + file + '.yml');
-                })).then(function(configs) {
-                    configs.push.apply(configs, results);
-                    'common browser server'.split(' ').forEach(function(key) {
-                        config[key] = config[key] || {};
-                        configs.forEach(function(configPart) {
-                            if (configPart && configPart[key]) {
-                                Object.assign(config[key], configPart[key]);
-                            }
+            .catch(function() {})
+            .then(function() {
+                Promise.all([
+                    fs.readYamlFile(paths.config + 'common.yml').catch(function() { }),
+                    fs.readYamlFile(paths.config + argv.env + '.yml'),
+                    fs.readYamlFile(paths.config + 'local.yml').catch(function() { }),
+                ]).then(function(results) {
+                    var config = {};
+                    var includes = results[0] && results[0].includes || [];
+                    if (results[1].include) {
+                        includes.push.apply(includes, results[1].include);
+                    }
+                    if (results[2] && results[2].include) {
+                        includes.push.apply(includes, results[2].include);
+                    }
+                    return Promise.all(includes.map(function(file) {
+                        return fs.readYamlFile(paths.config + file + '.yml');
+                    })).then(function(configs) {
+                        configs.push.apply(configs, results);
+                        'common browser server'.split(' ').forEach(function(key) {
+                            config[key] = config[key] || {};
+                            configs.forEach(function(configPart) {
+                                if (configPart && configPart[key]) {
+                                    Object.assign(config[key], configPart[key]);
+                                }
+                            });
+
                         });
+                        options.browserConfig = Object.assign({
+                            basepath: '/',
+                        }, config.common || {}, config.browser || {});
+                        options.browserConfig.webpath = options.browserConfig.webpath || options.browserConfig.basepath;
 
+                        options.serverConfig = Object.assign(config.common || {}, config.server || {});
+                        return Promise.all([
+                            fs.writeFile(paths.server.configdest + 'config.js',
+                                    'module.exports = ' + JSON.stringify(options.serverConfig, null, 4) + ';'),
+                            fs.writeFile(paths.browser.src + 'config-browser.js',
+                                    '// Auto generated file from yaml\n' +
+                                    'module.exports = ' + JSON.stringify(options.browserConfig, null, 4) + ';'),
+                        ]);
                     });
-                    options.browserConfig = Object.assign({
-                        basepath: '/',
-                    }, config.common || {}, config.browser || {});
-                    options.browserConfig.webpath = options.browserConfig.webpath || options.browserConfig.basepath;
 
-                    options.serverConfig = Object.assign(config.common || {}, config.server || {});
-                    return Promise.all([
-                        fs.writeFile(paths.server.configdest + 'config.js',
-                                'module.exports = ' + JSON.stringify(options.serverConfig, null, 4) + ';'),
-                        fs.writeFile(paths.browser.src + 'config-browser.js',
-                                '// Auto generated file from yaml\n' +
-                                'module.exports = ' + JSON.stringify(options.browserConfig, null, 4) + ';'),
-                    ]);
                 });
-
             })
             .then(function() {
                 done();
@@ -223,7 +223,7 @@ module.exports = function(pkg, gulp, options) {
                 console.error(err.stack || err.message || err);
                 done(err);
             });
-        }
+
     });
 
     /* Init : tasks only applied once */
@@ -257,12 +257,18 @@ module.exports = function(pkg, gulp, options) {
     /* Images */
 
     gulp.task(options.prefix + 'browser-images', function() {
-        return gulp.src(paths.browser.src + paths.browser.images + '/**/*', { base: paths.browser.src + paths.browser.images })
+        return gulp.src(
+                paths.browser.src + paths.browser.images + '/**/*',
+                { base: paths.browser.src + paths.browser.images }
+            )
             .pipe(gulp.dest(paths.public + 'images/'));
     });
 
     gulp.task(options.prefix + 'browser-imagesmin', [options.prefix + 'browser-images'], function() {
-        return gulp.src(paths.browser.src + paths.browser.images + '/**/*', { base: paths.browser.src + paths.browser.images })
+        return gulp.src(
+                paths.browser.src + paths.browser.images + '/**/*',
+                { base: paths.browser.src + paths.browser.images }
+            )
             .pipe(plugins.imagemin({ progressive: true }))
             .pipe(gulp.dest(paths.public + 'images/'));
     });
@@ -271,12 +277,12 @@ module.exports = function(pkg, gulp, options) {
     /* Tasks */
 
     gulp.task(options.prefix + 'browser-js', [options.prefix + 'browser-lintjs', options.prefix + 'browserifyjs']);
-    //gulp.task(options.prefix + 'browser-css', [options.prefix + 'browser-concatcss']);
+    // gulp.task(options.prefix + 'browser-css', [options.prefix + 'browser-concatcss']);
     if (paths.server) {
         gulp.task(options.prefix + 'server-js', [options.prefix + 'server-lintjs', options.prefix + 'server-buildjs']);
     }
 
-    //gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
+    // gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
     var tasksDefault = [
         options.prefix + 'browser-styles',
         options.prefix + 'browser-js',
@@ -328,89 +334,94 @@ module.exports = function(pkg, gulp, options) {
     if (spawnGulp) {
         gulp.task(options.prefix + 'watch', spawnGulp(gulp));
     } else {
-        gulp.task(options.prefix + 'watch', ['define-port', 'define-livereload-port', options.prefix + 'init-config', options.prefix + 'default'], function() {
-            var logfileChanged = function(from) {
-                return function(file) {
-                    console.log('[watch] ' + from + ': ' + file.path);
+        gulp.task(
+            options.prefix + 'watch',
+            ['define-port', 'define-livereload-port', options.prefix + 'init-config', options.prefix + 'default'],
+            function() {
+                var logfileChanged = function(from) {
+                    return function(file) {
+                        console.log('[watch] ' + from + ': ' + file.path);
+                    };
                 };
-            };
 
-            var port = startport + (options.multiIndex || 0);
-            var livereloadPort = startlivereloadPort + (options.multiIndex || 0);
-            console.log('create livereload server on port '+ livereloadPort);
-            var livereloadServer = tinylr({ port: livereloadPort });
-            var changed = function(filePath) {
-                if (filePath.substr(-4) === '.map') {
-                    // ignore reload for source map files
-                    return;
-                }
-                console.log('[livereload] ' + filePath);
-                livereloadServer.changed({ params: { files: [ filePath ] }});
-            };
+                var port = startport + (options.multiIndex || 0);
+                var livereloadPort = startlivereloadPort + (options.multiIndex || 0);
+                console.log('create livereload server on port ' + livereloadPort);
+                var livereloadServer = tinylr({ port: livereloadPort });
+                var changed = function(filePath) {
+                    if (filePath.substr(-4) === '.map') {
+                        // ignore reload for source map files
+                        return;
+                    }
+                    console.log('[livereload] ' + filePath);
+                    livereloadServer.changed({ params: { files: [ filePath ] } });
+                };
 
-            var daemon;
-            if (paths.server) {
-                var socketFolder = argv['socket-folder'] && argv['socket-folder'].replace(/\/+$/, '') + '/';
-                var socketName = options.prefix && options.prefix.replace(/[\-_]+$/, '') || 'socket';
-                daemon = require('springbokjs-daemon').node([
-                    '--harmony', paths.server.dist + paths.server.startfile,
-                    '--livereloadPort=' + livereloadPort,
-                    socketFolder ? '--socket-path=' + socketFolder + socketName + '.sock' : '--port=' + port,
-                ]);
-
-                process.on('exit', function(code) {
-                    daemon.stop();
-                    livereloadServer.close();
-                });
-            }
-
-            watchTasks.forEach(function(task) {
-                task(logfileChanged);
-            });
-
-
-
-
-            gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
-                .on('change', logfileChanged('images'));
-
-
-            livereloadServer.listen(livereloadPort, function() {
+                var daemon;
                 if (paths.server) {
-                    daemon.start();
+                    var socketFolder = argv['socket-folder'] && argv['socket-folder'].replace(/\/+$/, '') + '/';
+                    var socketName = options.prefix && options.prefix.replace(/[\-_]+$/, '') || 'socket';
+                    daemon = require('springbokjs-daemon').node([
+                        '--harmony', paths.server.dist + paths.server.startfile,
+                        '--livereloadPort=' + livereloadPort,
+                        socketFolder ? '--socket-path=' + socketFolder + socketName + '.sock' : '--port=' + port,
+                    ]);
 
-                    gulp.watch(paths.config + '*.yml', [options.prefix + 'init-config']);
-
-                    gulp.watch([
-                        paths.server.dist + '**/*',
-                        paths.common.dest + '**/*' ,
-                        paths.server.configdest + 'config.js',
-                    ]).on('change', function(file) {
-                        logfileChanged('server')(file);
-                        daemon.restart();
-                        daemon.once('stdout', function(data) {
-                            var string = data.toString().toLowerCase();
-                            if (string.indexOf('listening') !== -1) {
-                                changed(file.path);
-                                _notify("Server restarted");
-                            }
-                        });
+                    process.on('exit', function(code) {
+                        daemon.stop();
+                        livereloadServer.close();
                     });
-                } else {
-                    var express = require('express');
-                    var app = express();
-                    app.use(express.static(paths.public));
-                    app.use('/src', express.static('src/'));
-                    app.listen(port, gutil.log.bind(null,'static server started, listening on port ' + gutil.colors.magenta(port)));
                 }
-            });
 
-            gulp.watch(['data/**/*', paths.browser.dist + '**/*'])
-                .on('change', function(file) {
-                    logfileChanged('data&dist')(file);
-                    changed(file.path);
+                watchTasks.forEach(function(task) {
+                    task(logfileChanged);
                 });
-        });
+
+
+
+
+                gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
+                    .on('change', logfileChanged('images'));
+
+
+                livereloadServer.listen(livereloadPort, function() {
+                    if (paths.server) {
+                        daemon.start();
+
+                        gulp.watch(paths.config + '*.yml', [options.prefix + 'init-config']);
+
+                        gulp.watch([
+                            paths.server.dist + '**/*',
+                            paths.common.dest + '**/*' ,
+                            paths.server.configdest + 'config.js',
+                        ]).on('change', function(file) {
+                            logfileChanged('server')(file);
+                            daemon.restart();
+                            daemon.once('stdout', function(data) {
+                                var string = data.toString().toLowerCase();
+                                if (string.indexOf('listening') !== -1) {
+                                    changed(file.path);
+                                    _notify('Server restarted');
+                                }
+                            });
+                        });
+                    } else {
+                        var express = require('express');
+                        var app = express();
+                        app.use(express.static(paths.public));
+                        app.use('/src', express.static('src/'));
+                        app.listen(port, gutil.log.bind(null, 'static server started, listening on port ' +
+                                                                gutil.colors.magenta(port)));
+                    }
+                });
+
+                gulp.watch(['data/**/*', paths.browser.dist + '**/*'])
+                    .on('change', function(file) {
+                        logfileChanged('data&dist')(file);
+                        changed(file.path);
+                    });
+            }
+        );
     }
 };
 
