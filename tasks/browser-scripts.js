@@ -34,7 +34,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var requireRecursiveFolder = paths.browser.requireRecursiveFolder;
     if (requireRecursiveFolder) {
         preScriptsBrowserify.push(options.prefix + 'requireRecursiveFolder');
-        gulp.task(options.prefix + 'requireRecursiveFolder', function() {
+        gulp.task(options.prefix + 'requireRecursiveFolder', [options.prefix + 'init-config'], function() {
             return merge.apply(merge, Object.keys(requireRecursiveFolder).map(function(dest) {
                 var dir = requireRecursiveFolder[dest];
                 var src = [ paths.browser.src + paths.browser.js + dir + paths.scripts ];
@@ -43,8 +43,12 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                 });
                 return gulp.src(src, { read: false })
                     .pipe(plugins.setContents(function(file) {
-                        return JSON.stringify(file.relative) +
-                                    ': require(' + JSON.stringify('./' + dir + file.relative) + ');\n';
+                        if (file.relative.slice(-3) !== '.js') {
+                            return '';
+                        }
+                        var relativePath = path.relative(paths.browser.src + paths.browser.js, file.path).slice(0, -3);
+                        var fileName = path.basename(relativePath);
+                        return '\t' + fileName + ": require('./" + relativePath + '\'),';
                     }))
                     .pipe(plugins.concat(dest))
                     .pipe(plugins.insert.wrap('module.exports = {\n', '\n};\n'))
@@ -67,7 +71,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                     .pipe(through2.obj(function(file, encoding, next) {
                         if (file.relative === paths.browser.js + mainscript) {
                             browserify({ debug: !options.argv.production })
-                                .transform(es6to5ify)
+                                .transform(es6to5ify.configure(options.es6to5BrowserOptions))
                                 .require(file, { entry: file.path, basedir: paths.browser.src + paths.browser.js })
                                 .bundle(function(err, source) {
                                     if (err) {
@@ -101,13 +105,29 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                         mangle: false,
                         compress: {
                             warnings: false,
-                            global_defs: options.browserConfig, // jshint ignore:line
-                            unsafe: false, //!oldIe
+                            'global_defs': {  // jshint ignore:line
+                                production: !!options.argv.production,
+                                basepath: options.browserConfig.basepath,
+                                webpath: options.browserConfig.webpath
+                            },
+                            'drop_debugger': !!options.argv.production,
+                            unsafe: true, // !oldIe
+                            unused: false, // important keep the function name
                             comparisons: true,
                             sequences: false
                         },
-                        output: { beautify: !options.argv.production },
+                        output: {
+                            beautify: !options.argv.production && {
+                                'max-line-len': 200,
+                                bracketize: true,
+                            }
+                        },
+                        comments: !options.argv.production && 'all',
                     }).on('error', logAndNotify('uglify failed')))
+                    .pipe(plugins.if(false || options.argv.production, plugins.closure({
+                        'language_in': 'ECMASCRIPT5_STRICT',
+                        // formatting: options.argv.production ? null : 'PRETTY_PRINT'
+                    }).on('error', logAndNotify('closure compiler failed'))))
                 .pipe(plugins.sourcemaps.write('maps/' , { sourceRoot: '/' + paths.browser.src }))
                 .pipe(gulp.dest(paths.browser.dist + paths.browser.js));
         }));

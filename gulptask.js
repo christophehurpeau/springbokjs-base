@@ -117,10 +117,17 @@ module.exports = function(pkg, gulp, options) {
 
     /* OPTIONS */
 
-    options.es6to5Options = {};
+    options.es6to5Options = {
+        comments: true,
+        blacklist: [/*'_declarations'*/]
+    };
     if (!options.generatorsTranspilationEnabled) {
-        options.es6to5Options.blacklist = [ 'generators' ];
+        options.es6to5Options.blacklist.push('generators');
     }
+    es6to5BrowserOptions = {
+        comments: true,
+        blacklist: [/*'_declarations'*/]
+    };
 
     var paths = Object.assign({
         scripts: '**/*.js',
@@ -173,7 +180,7 @@ module.exports = function(pkg, gulp, options) {
         fs.mkdir(paths.server.configdest)
             .catch(function() {})
             .then(function() {
-                Promise.all([
+                return Promise.all([
                     fs.readYamlFile(paths.config + 'common.yml').catch(function() { }),
                     fs.readYamlFile(paths.config + argv.env + '.yml'),
                     fs.readYamlFile(paths.config + 'local.yml').catch(function() { }),

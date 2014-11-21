@@ -116,7 +116,7 @@
 
     "requireSpacesInsideObjectBrackets": "all",
     // "requireSpacesInsideArrayBrackets": false,
-    "disallowQuotedKeysInObjects": true, // ES3+ reserved words should be quoted by the uglify / closure compiler
+    // "disallowQuotedKeysInObjects": true, // ES3+ reserved words should be quoted by the uglify / closure compiler
     // "disallowDanglingUnderscores"
 
     // Youhou :)
