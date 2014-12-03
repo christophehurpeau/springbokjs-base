@@ -237,6 +237,8 @@ module.exports = function(pkg, gulp, options) {
     init(gulp, options);
 
     var tasks = [
+        /* public */
+        require('./tasks/browser-public.js'),
         /* Styles */
         require('./tasks/browser-styles.js'),
         /* Lint Scripts */
@@ -291,6 +293,7 @@ module.exports = function(pkg, gulp, options) {
 
     // gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
     var tasksDefault = [
+        options.prefix + 'browser-public',
         options.prefix + 'browser-styles',
         options.prefix + 'browser-js',
         options.prefix + 'browser-templates',
