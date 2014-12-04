@@ -99,7 +99,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                             next();
                         }
                     }).on('error', logAndNotify('browserify failed')))
-                    //.pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
+                    // .pipe(rename(pkg.name + /*'-' + pkg.version +*/ '.js'))
                     .pipe(plugins.concat(path.basename(mainscript).slice(0, -3) + /*'-' + pkg.version +*/ '.js'))
                     .pipe(plugins.uglify({
                         mangle: false,
@@ -124,7 +124,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                         },
                         comments: !options.argv.production && 'all',
                     }).on('error', logAndNotify('uglify failed')))
-                    .pipe(plugins.if(false || options.argv.production, plugins.closure({
+                    .pipe(plugins.if(false && options.argv.production, plugins.closure({
                         'language_in': 'ECMASCRIPT5_STRICT',
                         // formatting: options.argv.production ? null : 'PRETTY_PRINT'
                     }).on('error', logAndNotify('closure compiler failed'))))
