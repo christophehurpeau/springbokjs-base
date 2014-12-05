@@ -23,7 +23,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             modifyVars: {
                 production: !!options.argv.production
             },
-            //paths: (file) => { return [ file.dirname, options.paths.bowerPath ]; }
+            // paths: (file) => { return [ file.dirname, options.paths.bowerPath ]; }
         };
         compileStyles = function() {
             return plugins.less(lessOptions).on('error', logAndNotify('Less failed'));

@@ -154,6 +154,7 @@ module.exports = function(pkg, gulp, options) {
         mainscripts: pkg.name + '.js',
         styles: 'style/',
         templates: 'templates/',
+        iconfont: 'iconfont/',
         mainstyle: 'main.less',
         images: 'images',
     }, paths.browser);
@@ -241,6 +242,8 @@ module.exports = function(pkg, gulp, options) {
         require('./tasks/browser-public.js'),
         /* Styles */
         require('./tasks/browser-styles.js'),
+        /* iconfont */
+        require('./tasks/browser-iconfont.js'),
         /* Lint Scripts */
         require('./tasks/lint-scripts.js'),
         /* Browser scripts */
@@ -295,6 +298,7 @@ module.exports = function(pkg, gulp, options) {
     var tasksDefault = [
         options.prefix + 'browser-public',
         options.prefix + 'browser-styles',
+        options.prefix + 'browser-iconfont',
         options.prefix + 'browser-js',
         options.prefix + 'browser-templates',
         options.prefix + 'browser-images'
