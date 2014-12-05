@@ -137,7 +137,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         gulp.watch(paths.browser.src + paths.scripts, [options.prefix + 'browser-js'])
             .on('change', logfileChanged('browser.scripts'));
         commonScripts.forEach(function(commonbase) {
-            gulp.watch(commonbase + paths.scripts, [options.prefix + 'browser-common-js'])
+            gulp.watch(commonbase + paths.scripts, [options.prefix + 'browser-js'])
                 .on('change', logfileChanged('browser.commonScripts'));
         });
     };
