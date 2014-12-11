@@ -8,7 +8,6 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     }
     var sourceRoot = function(src, dest, file) {
         var slashMatches = file.relative.match(/\//g);
-        console.log(src, dest, file.relative, slashMatches);
         return '../'.repeat(dest.replace(/\/+$/, '').split('/').length)
                          + (slashMatches && '../'.repeat(slashMatches.length) || '')
                          + src.replace(/\/+$/, '');
