@@ -1,16 +1,17 @@
 /* jshint maxlen: 200 */
-var path = require('path');
+var merge = require('merge-stream');
 
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
     if (!paths.server) {
         return;
     }
-    var sourceRoot = function(file) {
-        var dirname = path.dirname(file.relative) + '/';
-        var slashMatches = file.relative.match(/\//);
-        return '../' + (slashMatches && '../'.repeat(slashMatches.length) || '')
-                         + 'src' + (dirname === './' ? '/' : '/' + dirname);
+    var sourceRoot = function(src, dest, file) {
+        var slashMatches = file.relative.match(/\//g);
+        console.log(src, dest, file.relative, slashMatches);
+        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length)
+                         + (slashMatches && '../'.repeat(slashMatches.length) || '')
+                         + src.replace(/\/+$/, '');
     };
 
     var srcServerTemplatesPart = [
@@ -40,30 +41,33 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         if (!templateOptions.path) {
             return;
         }
-        var srcServerTemplates = srcServerTemplatesPart.map(function(v) { return v + templateOptions.path; });
         var taskName = options.prefix + 'server-' + templateOptions.suffix;
         serverTemplates.push(taskName);
-        watchPaths.push(['templates' + templateOptions.suffix.toUpperCase(), srcServerTemplates, taskName]);
-
 
         gulp.task(taskName, function() {
             if (!templateOptions.pipe) {
+                var srcServerTemplates = srcServerTemplatesPart.map(function(v) { return v + templateOptions.path; });
                 return gulp.src(srcServerTemplates)
+                    .pipe(plugins.changed(paths.server.dist))
                     .pipe(gulp.dest(paths.server.dist));
             }
-            var logPrefix = templateOptions.suffix.toUpperCase();
-            return gulp.src(srcServerTemplates)
-                .pipe(plugins.changed(paths.server.dist/*, { extension: 'js' }*/))
-                .pipe(plugins.sourcemaps.init())
-                    .pipe(templateOptions.pipe(templateOptions.pipeOptions || {}).on('error', logAndNotify(logPrefix + ' compile failed')))
-                    .pipe(plugins.if(templateOptions.isJs, plugins.es6to5(options.es6to5Options)
-                                .on('error', logAndNotify(logPrefix + 'es6to5 failed'))))
-                .pipe(plugins.sourcemaps.write('.' , {
-                    addComment: true,
-                    includeContent: false,
-                    sourceRoot: sourceRoot
-                }))
-                .pipe(gulp.dest(paths.server.dist));
+
+            return merge.apply(merge, srcServerTemplatesPart.map(function(basesrc) {
+                var logPrefix = templateOptions.suffix.toUpperCase();
+                watchPaths.push(['templates' + logPrefix, basesrc + templateOptions.path, taskName]);
+                return gulp.src(basesrc + templateOptions.path, { base: basesrc })
+                    .pipe(plugins.changed(paths.server.dist/*, { extension: 'js' }*/))
+                    .pipe(plugins.sourcemaps.init())
+                        .pipe(templateOptions.pipe(templateOptions.pipeOptions || {}).on('error', logAndNotify(logPrefix + ' compile failed')))
+                        .pipe(plugins.if(templateOptions.isJs, plugins.es6to5(options.es6to5Options)
+                                    .on('error', logAndNotify(logPrefix + 'es6to5 failed'))))
+                    .pipe(plugins.sourcemaps.write('.' , {
+                        addComment: true,
+                        includeContent: true,
+                        sourceRoot: sourceRoot.bind(null, basesrc, paths.server.dist)
+                    }))
+                    .pipe(gulp.dest(paths.server.dist));
+            }));
         });
     });
 

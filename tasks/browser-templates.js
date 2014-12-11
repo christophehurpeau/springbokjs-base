@@ -6,7 +6,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
 
     var sourceRoot = function(file) {
         var dirname = path.dirname(file.relative) + '/';
-        var slashMatches = file.relative.match(/\//);
+        var slashMatches = file.relative.match(/\//g);
         return '../' + (slashMatches && '../'.repeat(slashMatches.length) || '')
                          + 'src' + (dirname === './' ? '/' : '/' + dirname);
     };

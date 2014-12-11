@@ -7,8 +7,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     }
 
     var sourceRoot = function(src, dest, file) {
-        var slashMatches = file.relative.match(/\//);
-        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length + 1)
+        var slashMatches = file.relative.match(/\//g);
+        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length)
                          + (slashMatches && '../'.repeat(slashMatches.length) || '')
                          + src.replace(/\/+$/, '');
     };
