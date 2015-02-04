@@ -15,6 +15,8 @@ var gutil = require('gulp-util');
 // var rename = require('gulp-rename');
 var notifier = require('node-notifier');
 
+// var INotifyWait = require('inotifywait');
+
 var argv = require('minimist')(process.argv.slice(2), {
     alias: {
         production: 'prod'
@@ -48,9 +50,6 @@ var init = function(gulp, options) {
             done();
         });
     });
-    /* Import springbokjs-shim task */
-
-    require('springbokjs-shim/gulptask.js')(gulp, paths.browser.dist);
 };
 
 
@@ -124,7 +123,7 @@ module.exports = function(pkg, gulp, options) {
     if (!options.generatorsTranspilationEnabled) {
         options.es6to5Options.blacklist.push('generators');
     }
-    es6to5BrowserOptions = {
+    options.es6to5BrowserOptions = {
         comments: true,
         blacklist: [/*'_declarations'*/]
     };
@@ -164,17 +163,17 @@ module.exports = function(pkg, gulp, options) {
     }
     paths.server = paths.server !== false && Object.assign({
         common: 'src/common/',
-        dist: 'lib/server/',
+        dist: 'lib/',
         startfile: 'server.js',
         configdest: 'lib/'
     }, S.isString(paths.server) ? { src: paths.server } : paths.server);
 
-    options.prefix = options.prefix || '';
+    var prefix = options.prefix = options.prefix || '';
     options.paths = paths;
     options.argv = argv;
 
     /* Config */
-    gulp.task(options.prefix + 'init-config', function(done) {
+    gulp.task(prefix + 'init-config', function(done) {
         if (!argv.env) {
             return done();
         }
@@ -268,7 +267,7 @@ module.exports = function(pkg, gulp, options) {
 
     /* Images */
 
-    gulp.task(options.prefix + 'browser-images', function() {
+    gulp.task(prefix + 'browser-images', function() {
         return gulp.src(
                 paths.browser.src + paths.browser.images + '/**/*',
                 { base: paths.browser.src + paths.browser.images }
@@ -276,7 +275,7 @@ module.exports = function(pkg, gulp, options) {
             .pipe(gulp.dest(paths.public + 'images/'));
     });
 
-    gulp.task(options.prefix + 'browser-imagesmin', [options.prefix + 'browser-images'], function() {
+    gulp.task(prefix + 'browser-imagesmin', [prefix + 'browser-images'], function() {
         return gulp.src(
                 paths.browser.src + paths.browser.images + '/**/*',
                 { base: paths.browser.src + paths.browser.images }
@@ -288,38 +287,46 @@ module.exports = function(pkg, gulp, options) {
 
     /* Tasks */
 
-    gulp.task(options.prefix + 'browser-js', [options.prefix + 'browser-lintjs', options.prefix + 'browserifyjs']);
-    // gulp.task(options.prefix + 'browser-css', [options.prefix + 'browser-concatcss']);
+    if (argv['no-lint']) {
+        gulp.task(prefix + 'browser-js', [prefix + 'browserifyjs']);
+    } else {
+        gulp.task(prefix + 'browser-js', [prefix + 'browser-lintjs', prefix + 'browserifyjs']);
+    }
+    // gulp.task(prefix + 'browser-css', [prefix + 'browser-concatcss']);
     if (paths.server) {
-        gulp.task(options.prefix + 'server-js', [options.prefix + 'server-lintjs', options.prefix + 'server-buildjs']);
+        if (argv['no-lint']) {
+            gulp.task(prefix + 'server-js', [prefix + 'server-buildjs']);
+        } else {
+            gulp.task(prefix + 'server-js', [prefix + 'server-lintjs', prefix + 'server-buildjs']);
+        }
     }
 
     // gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
     var tasksDefault = [
-        options.prefix + 'browser-public',
-        options.prefix + 'browser-styles',
-        options.prefix + 'browser-iconfont',
-        options.prefix + 'browser-js',
-        options.prefix + 'browser-templates',
-        options.prefix + 'browser-images'
+        prefix + 'browser-public',
+        prefix + 'browser-styles',
+        prefix + 'browser-iconfont',
+        prefix + 'browser-js',
+        prefix + 'browser-templates',
+        prefix + 'browser-images'
     ];
     if (paths.browser.independantStyles) {
-        tasksDefault.push(options.prefix + 'browser-independant-styles');
+        tasksDefault.push(prefix + 'browser-independant-styles');
     }
     if (argv.env) {
-        tasksDefault.unshift(options.prefix + 'init-config');
+        tasksDefault.unshift(prefix + 'init-config');
     }
     if (paths.server !== false) {
         tasksDefault.push.apply(tasksDefault, [
-            options.prefix + 'server-js',
-            options.prefix + 'server-templates',
+            prefix + 'server-js',
+            prefix + 'server-templates',
         ]);
     }
-    gulp.task(options.prefix + 'default', tasksDefault);
+    gulp.task(prefix + 'default', tasksDefault);
 
-    gulp.task(options.prefix + 'lint', [options.prefix + 'lintjs']);
+    gulp.task(prefix + 'lint', [prefix + 'lintjs']);
 
-    gulp.task(options.prefix + 'clean', function(done) {
+    gulp.task(prefix + 'clean', function(done) {
         Promise.all([
             paths.server && paths.server.dist,
             paths.common && paths.common.dist,
@@ -346,11 +353,11 @@ module.exports = function(pkg, gulp, options) {
 
 
     if (spawnGulp) {
-        gulp.task(options.prefix + 'watch', spawnGulp(gulp));
+        gulp.task(prefix + 'watch', spawnGulp(gulp));
     } else {
         gulp.task(
-            options.prefix + 'watch',
-            ['define-port', 'define-livereload-port', options.prefix + 'init-config', options.prefix + 'default'],
+            prefix + 'watch',
+            ['define-port', 'define-livereload-port', prefix + 'init-config', prefix + 'default'],
             function() {
                 var logfileChanged = function(from) {
                     return function(file) {
@@ -374,7 +381,7 @@ module.exports = function(pkg, gulp, options) {
                 var daemon;
                 if (paths.server) {
                     var socketFolder = argv['socket-folder'] && argv['socket-folder'].replace(/\/+$/, '') + '/';
-                    var socketName = options.prefix && options.prefix.replace(/[\-_]+$/, '') || 'socket';
+                    var socketName = prefix && prefix.replace(/[\-_]+$/, '') || 'socket';
                     daemon = require('springbokjs-daemon').node([
                         '--harmony', paths.server.dist + paths.server.startfile,
                         '--livereloadPort=' + livereloadPort,
@@ -394,7 +401,7 @@ module.exports = function(pkg, gulp, options) {
 
 
 
-                gulp.watch(paths.browser.src + paths.browser.images, [options.prefix + 'browser-images'])
+                gulp.watch(paths.browser.src + paths.browser.images, [prefix + 'browser-images'])
                     .on('change', logfileChanged('images'));
 
 
@@ -402,7 +409,21 @@ module.exports = function(pkg, gulp, options) {
                     if (paths.server) {
                         daemon.start();
 
-                        gulp.watch(paths.config + '*.yml', [options.prefix + 'init-config']);
+                        gulp.watch(paths.config + '*.yml', [prefix + 'init-config']);
+
+                        var restart = function(done) {
+                            console.log('restart asked');
+                            daemon.restart();
+                            daemon.once('stdout', function(data) {
+                                var string = data.toString().toLowerCase();
+                                if (string.indexOf('listening') !== -1) {
+                                    if (done) {
+                                        done();
+                                    }
+                                    _notify((prefix ? prefix + ': ' : '') + 'Server restarted');
+                                }
+                            });
+                        };
 
                         gulp.watch([
                             paths.server.dist + '**/*',
@@ -410,15 +431,49 @@ module.exports = function(pkg, gulp, options) {
                             paths.server.configdest + 'config.js',
                         ]).on('change', function(file) {
                             logfileChanged('server')(file);
-                            daemon.restart();
-                            daemon.once('stdout', function(data) {
-                                var string = data.toString().toLowerCase();
-                                if (string.indexOf('listening') !== -1) {
-                                    changed(file.path);
-                                    _notify('Server restarted');
-                                }
+                            restart(function() {
+                                changed(file.path);
                             });
                         });
+
+/*
+                        var nodeModulesDirectory = process.cwd() + '/node_modules';
+                        var _timeoutRestart;
+                        var timeoutRestart = function() {
+                            if (_timeoutRestart) {
+                                clearTimeout(_timeoutRestart);
+                            }
+                            _timeoutRestart = setTimeout(restart, 600);
+                        };
+                        var addWatcher = function(directory) {
+                            directory = fs.realpathSync(directory);
+                            console.log('add watcher ' + directory);
+                            var watcher = new INotifyWait(directory, { recursive: true });
+                            watcher.on('error', console.error);
+                            watcher.on('add', function(filename) {
+                                console.log(filename + ' added');
+                                timeoutRestart();
+                            });
+                            watcher.on('change', function(filename) {
+                                console.log(filename + ' changed');
+                                timeoutRestart();
+                            });
+                        };
+
+                        var watchNodeModules = new INotifyWait(nodeModulesDirectory, { recursive: false });
+                        watchNodeModules.on('error', console.error);
+                        watchNodeModules.on('add', function(filename, stats) {
+                            console.log(filename + ' added');
+                            if (stats.isDir) {
+                                addWatcher(filename);
+                            }
+                        });
+
+                        var nodeModulesDirectories = fs.readdirSync(nodeModulesDirectory);
+                        nodeModulesDirectories.forEach(function(nodeModuleDirectory) {
+                            addWatcher(nodeModulesDirectory + '/' + nodeModuleDirectory + '/');
+                        });
+*/
                     } else {
                         var express = require('express');
                         var app = express();

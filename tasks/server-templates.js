@@ -8,9 +8,9 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     }
     var sourceRoot = function(src, dest, file) {
         var slashMatches = file.relative.match(/\//g);
-        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length)
-                         + (slashMatches && '../'.repeat(slashMatches.length) || '')
-                         + src.replace(/\/+$/, '');
+        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length) +
+                (slashMatches && '../'.repeat(slashMatches.length) || '') +
+                src.replace(/\/+$/, '');
     };
 
     var srcServerTemplatesPart = [
@@ -20,7 +20,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         paths.server.common && (paths.server.common)
     ].filter(function(elt) { return !!elt; });
 
-    //.pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
+    // .pipe(ejs({ compileDebug: true, client: false }).on('error', logAndNotify('EJS compile failed')))
     var serverTemplates = [];
     var watchPaths = [];
 
@@ -33,8 +33,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             suffix: 'jsx',
             path: paths.templatesJSX,
             isJs: true,
-            pipe: plugins.react,
-            pipeOptions: { domPragma: options.reactDomPragma || '$.create' }
+            pipe: plugins.react
         }
     ].forEach(function(templateOptions) {
         if (!templateOptions.path) {

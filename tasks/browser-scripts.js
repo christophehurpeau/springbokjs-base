@@ -6,7 +6,11 @@ var path = require('path');
 var applySourceMap = require('vinyl-sourcemaps-apply');
 
 var browserify = require('browserify');
-var es6to5ify = require('6to5-browserify');
+var es6to5ify = require('6to5ify');
+var reactify = require('reactify');
+
+var sourceMapRegexp =
+        /^[ \t]*(?:\/\/|\/\*)[@#][ \t]+sourceMappingURL=data:(?:application|text)\/json;base64,(.+)(?:\*\/)?/mg;
 
 module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     var paths = options.paths;
@@ -37,18 +41,31 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         gulp.task(options.prefix + 'requireRecursiveFolder', [options.prefix + 'init-config'], function() {
             return merge.apply(merge, Object.keys(requireRecursiveFolder).map(function(dest) {
                 var dir = requireRecursiveFolder[dest];
-                var src = [ paths.browser.src + paths.browser.js + dir + paths.scripts ];
+                var src = paths.browser.src + paths.browser.js + dir;
+
+                var sources = [ gulp.src(src, { base: paths.browser.src + paths.browser.js, read: false }) ];
                 commonScripts.forEach(function(commonbase) {
-                    src.push(commonbase + dir + paths.scripts);
+                    sources.push(gulp.src(commonbase + dir, { base: commonbase, read: false }));
                 });
-                return gulp.src(src, { read: false })
+
+                var stream = sources.length === 1 ? sources[0] : merge(sources);
+
+                return stream
                     .pipe(plugins.setContents(function(file) {
-                        if (file.relative.slice(-3) !== '.js') {
-                            return '';
+                        var relativePath = path.relative(paths.browser.src + paths.browser.js + path.dirname(dest), file.path);
+
+                        if (relativePath.slice(-3) === '.js') {
+                            relativePath = relativePath.slice(0, -3);
                         }
-                        var relativePath = path.relative(paths.browser.src + paths.browser.js, file.path).slice(0, -3);
-                        var fileName = path.basename(relativePath);
-                        return '\t' + fileName + ": require('./" + relativePath + '\'),';
+
+                        var key = file.relative;
+                        if (key.slice(-3) === '.js') {
+                            key = key.slice(0, -3);
+                        } else if (key.slice(-4) === '.jsx') {
+                            key = key.slice(0, -4);
+                        }
+                        // var fileName = path.basename(relativePath);
+                        return '\t\'' + key + "\': require('./" + relativePath + '\'),';
                     }))
                     .pipe(plugins.concat(dest))
                     .pipe(plugins.insert.wrap('module.exports = {\n', '\n};\n'))
@@ -72,6 +89,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                         if (file.relative === paths.browser.js + mainscript) {
                             browserify({ debug: !options.argv.production })
                                 .transform(es6to5ify.configure(options.es6to5BrowserOptions))
+                                .transform(reactify)
                                 .require(file, { entry: file.path, basedir: paths.browser.src + paths.browser.js })
                                 .bundle(function(err, source) {
                                     if (err) {
@@ -79,7 +97,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                                         return next();
                                     }
                                     // //# sourceMappingURL=data:application/json;base64,
-                                    var m = /^[ \t]*(?:\/\/|\/\*)[@#][ \t]+sourceMappingURL=data:(?:application|text)\/json;base64,(.+)(?:\*\/)?/mg.exec(source);
+                                    var m = sourceMapRegexp.exec(source);
 
                                     var sourceMapContent = m && m[1];
                                     if (sourceMapContent) {
@@ -108,7 +126,9 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                             'global_defs': {  // jshint ignore:line
                                 production: !!options.argv.production,
                                 basepath: options.browserConfig.basepath,
-                                webpath: options.browserConfig.webpath
+                                webpath: options.browserConfig.webpath,
+                                BROWSER: true,
+                                SERVER: false
                             },
                             'drop_debugger': !!options.argv.production,
                             unsafe: true, // !oldIe
@@ -140,6 +160,17 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
             gulp.watch(commonbase + paths.scripts, [options.prefix + 'browser-js'])
                 .on('change', logfileChanged('browser.commonScripts'));
         });
+        if (requireRecursiveFolder) {
+            Object.keys(requireRecursiveFolder).forEach(function(dest) {
+                var dir = requireRecursiveFolder[dest];
+                var src = [ paths.browser.src + paths.browser.js + dir ];
+                commonScripts.forEach(function(commonbase) {
+                    src.push(commonbase + dir);
+                });
+                gulp.watch(src, [options.prefix + 'requireRecursiveFolder'])
+                    .on('change', logfileChanged('browser.requireRecursiveFolder ' + dir));
+            });
+        }
     };
 
 };

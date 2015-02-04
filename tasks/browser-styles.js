@@ -9,7 +9,9 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         compileStyles = function() {
             return plugins.stylus({
                 errors: true,
-                paths: options.paths.stylesIncludePath
+                paths: options.paths.stylesIncludePath,
+                inline: true,
+                sourceRoot: '.',
             });
         };
     } else {
@@ -47,8 +49,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
 
     if (Array.isArray(src)) {
         if (mainstyles.length > 1) {
-            gutil.log(gutil.colors.red.bold('the configuration array options.src.js'
-                    + ' should be defined for each of yours mainscripts'));
+            gutil.log(gutil.colors.red.bold('the configuration array options.src.js' +
+                ' should be defined for each of yours mainscripts'));
         }
         var oldSrc = src;
         src = {};
@@ -74,7 +76,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
     gulp.task(options.prefix + 'browser-styles-min', [options.prefix + 'browser-styles'], function() {
         gulp.src(paths.browser.dist + '*.css')
             .pipe(plugins.csso())
-            .pipe(plugins.rename(function (path) {
+            .pipe(plugins.rename(function(path) {
                 path.suffix += '-' + pkg.version + '.min';
             }))
             .pipe(gulp.dest(paths.browser.dist));
