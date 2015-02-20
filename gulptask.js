@@ -119,14 +119,20 @@ module.exports = function(pkg, gulp, options) {
 
     /* OPTIONS */
 
+    if (options.es6to5Options) {
+        throw new Error('set options.babelOptions now, es6to5 is deprecated.');
+    }
+    if (options.es6to5BrowserOptions) {
+        throw new Error('set options.babelBrowserOptions now, es6to5 is deprecated.');
+    }
+
+
     options.babelOptions = options.babelOptions || {};
     options.babelOptions = Object.assign(options.babelOptions, {
         blacklist: options.babelOptions.blacklist || [ 'regenerator' ]
     });
 
     options.babelBrowserOptions = {
-        comments: true,
-        blacklist: [/*'_declarations'*/]
     };
 
     var paths = Object.assign({
