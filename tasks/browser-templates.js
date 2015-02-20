@@ -54,8 +54,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                     .pipe(plugins.sourcemaps.init())
                         .pipe(templateOptions.pipe(templateOptions.pipeOptions || {})
                                     .on('error', logAndNotify(logPrefix + ' compile failed')))
-                        .pipe(plugins.if(templateOptions.isJs, plugins.es6to5(options.es6to5Options)
-                                    .on('error', logAndNotify(logPrefix + 'es6to5 failed'))))
+                        .pipe(plugins.if(templateOptions.isJs, plugins.babel(options.babelOptions)
+                                    .on('error', logAndNotify(logPrefix + 'babel failed'))))
                         .pipe(plugins.insert.wrap(
                             '(function(exports) {\n',
                             function(file) { return '\n})(window.templates[\'' + file.relative + '\'] = {});'; }

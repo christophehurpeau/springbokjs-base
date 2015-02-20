@@ -42,10 +42,10 @@ fi
 git diff-index --check --cached $against -- || exit 1
 
 echo 'Jshint check'
-node_modules/springbokjs-library/node_modules/gulp-jshint/node_modules/.bin/jshint *.js src tests/src || exit 1
+node_modules/springbokjs-base/node_modules/gulp-jshint/node_modules/.bin/jshint *.js src tests/src || exit 1
 
 echo 'Jscs check'
-# node_modules/springbokjs-library/node_modules/gulp-jscs/node_modules/.bin/jscs *.js src tests/src || exit 1
+# node_modules/springbokjs-base/node_modules/gulp-jscs/node_modules/.bin/jscs *.js src tests/src || exit 1
 # Cannot activate until https://github.com/jscs-dev/node-jscs/issues/706 is resolved
 
 echo 'Unit tests'

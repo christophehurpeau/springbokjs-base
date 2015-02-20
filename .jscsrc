@@ -1,6 +1,8 @@
 {
     // Attempts to parse your code as ES6 using the harmony version of the esprima parser.
     "esnext": true,
+    "esprima": "esprima-fb",
+    "fileExtensions": [".js", ".jsx"],
 
     "excludeFiles": [
         "**/*.min.js"

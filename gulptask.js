@@ -1,5 +1,9 @@
 /* jshint maxlen: 200 */
 
+process.on('uncaughtException', function(err) {
+    console.error('uncaughtException:', err && (err.stack || err.message || err));
+});
+
 require('es6-shim/es6-shim');
 
 var S = require('springbokjs-utils');
@@ -26,7 +30,6 @@ var argv = require('minimist')(process.argv.slice(2), {
 var startport, startlivereloadPort;
 
 var init = function(gulp, options) {
-    var paths = options.paths;
     init = function() {};
     gulp.task('define-port', function(done) {
         if (startport || argv['socket-folder']) {
@@ -116,14 +119,12 @@ module.exports = function(pkg, gulp, options) {
 
     /* OPTIONS */
 
-    options.es6to5Options = {
-        comments: true,
-        blacklist: [/*'_declarations'*/]
-    };
-    if (!options.generatorsTranspilationEnabled) {
-        options.es6to5Options.blacklist.push('generators');
-    }
-    options.es6to5BrowserOptions = {
+    options.babelOptions = options.babelOptions || {};
+    options.babelOptions = Object.assign(options.babelOptions, {
+        blacklist: options.babelOptions.blacklist || [ 'regenerator' ]
+    });
+
+    options.babelBrowserOptions = {
         comments: true,
         blacklist: [/*'_declarations'*/]
     };

@@ -6,7 +6,7 @@ var path = require('path');
 var applySourceMap = require('vinyl-sourcemaps-apply');
 
 var browserify = require('browserify');
-var es6to5ify = require('6to5ify');
+var babelify = require('babelify');
 var reactify = require('reactify');
 
 var sourceMapRegexp =
@@ -88,7 +88,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
                     .pipe(through2.obj(function(file, encoding, next) {
                         if (file.relative === paths.browser.js + mainscript) {
                             browserify({ debug: !options.argv.production })
-                                .transform(es6to5ify.configure(options.es6to5BrowserOptions))
+                                .transform(babelify.configure(options.babelBrowserOptions))
                                 .transform(reactify)
                                 .require(file, { entry: file.path, basedir: paths.browser.src + paths.browser.js })
                                 .bundle(function(err, source) {
