@@ -7,14 +7,14 @@
     "gulp",
     "skeleton"
   ],
-  "version": "0.31.1",
+  "version": "0.31.2",
   "homepage": "http://springbokjs.org",
   "license": "MIT",
   "author": "Christophe Hurpeau <christophe@hurpeau.com> (http://christophe.hurpeau.com/)",
   "repository": "git://github.com/christophehurpeau/springbokjs-base.git",
   "dependencies": {
     "babelify": "5.0.3",
-    "browserify": "^8.1",
+    "browserify": "^9.0.3",
     "closurecompiler": "^1.5.1",
     "connect-livereload": "^0.5.3",
     "es6-shim": "^0.25.2",

@@ -129,7 +129,8 @@ module.exports = function(pkg, gulp, options) {
 
     options.babelOptions = options.babelOptions || {};
     options.babelOptions = Object.assign(options.babelOptions, {
-        blacklist: options.babelOptions.blacklist || [ 'regenerator' ]
+        blacklist: options.babelOptions.blacklist || [ 'regenerator' ],
+        modules: options.babelOptions.modules || 'common'
     });
 
     options.babelBrowserOptions = {
