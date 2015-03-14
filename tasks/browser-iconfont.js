@@ -7,7 +7,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         return gulp.src(paths.browser.src + paths.browser.iconfont + '**/*.svg')
             .pipe(plugins.iconfont({ fontName: 'icons' }))
             .on('codepoints', function(codepoints, options) {
-                gulp.src(__dirname + '/tools/template-iconfont.styl')
+                return gulp.src(__dirname + '/tools/template-iconfont.styl')
                     .pipe(plugins.consolidate('lodash', {
                         glyphs: codepoints,
                         fontName: 'icons',

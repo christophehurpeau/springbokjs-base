@@ -310,27 +310,31 @@ module.exports = function(pkg, gulp, options) {
     }
 
     // gulp.task('build', ['cssmin', 'jsmin', 'ejsmin', 'imagesmin']);
-    var tasksDefault = [
+    var tasksPrebuild = [
+        prefix + 'browser-iconfont'
+    ];
+    var tasksBuild = [
         prefix + 'browser-public',
         prefix + 'browser-styles',
-        prefix + 'browser-iconfont',
         prefix + 'browser-js',
         prefix + 'browser-templates',
         prefix + 'browser-images'
     ];
     if (paths.browser.independantStyles) {
-        tasksDefault.push(prefix + 'browser-independant-styles');
+        tasksBuild.push(prefix + 'browser-independant-styles');
     }
     if (argv.env) {
-        tasksDefault.unshift(prefix + 'init-config');
+        tasksBuild.unshift(prefix + 'init-config');
     }
     if (paths.server !== false) {
-        tasksDefault.push.apply(tasksDefault, [
+        tasksBuild.push.apply(tasksBuild, [
             prefix + 'server-js',
             prefix + 'server-templates',
         ]);
     }
-    gulp.task(prefix + 'default', tasksDefault);
+    gulp.task(prefix + 'pre-build', tasksPrebuild);
+    gulp.task(prefix + 'build', tasksBuild);
+    gulp.task(prefix + 'default', ['build']);
 
     gulp.task(prefix + 'lint', [prefix + 'lintjs']);
 
@@ -514,7 +518,7 @@ module.exports.multi = function(pkg, gulp, multi) {
         options.multiIndex = index;
         module.exports(pkg, gulp, options);
     });
-    'default watch clean lint'.split(' ').forEach(function(task) {
+    'default pre-build watch clean lint'.split(' ').forEach(function(task) {
         var tasks = prefixes.map(function(prefix) {
             return prefix + '-' + task;
         });
