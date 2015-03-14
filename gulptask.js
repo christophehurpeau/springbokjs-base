@@ -438,6 +438,10 @@ module.exports = function(pkg, gulp, options) {
                             paths.common.dest + '**/*' ,
                             paths.server.configdest + 'config.js',
                         ]).on('change', function(file) {
+                            if (file.path.substr(-4) === '.map') {
+                                // ignore reload for source map files
+                                return;
+                            }
                             logfileChanged('server')(file);
                             restart(function() {
                                 changed(file.path);
