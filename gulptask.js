@@ -518,7 +518,7 @@ module.exports.multi = function(pkg, gulp, multi) {
         options.multiIndex = index;
         module.exports(pkg, gulp, options);
     });
-    'default pre-build watch clean lint'.split(' ').forEach(function(task) {
+    'default pre-build build watch clean lint'.split(' ').forEach(function(task) {
         var tasks = prefixes.map(function(prefix) {
             return prefix + '-' + task;
         });
