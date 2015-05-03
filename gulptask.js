@@ -137,7 +137,7 @@ module.exports = function(pkg, gulp, options) {
     };
 
     var paths = Object.assign({
-        scripts: '**/*.js',
+        scripts: '**/*.{js,jsx}',
         templatesEJS: '**/*.ejs',
         templatesJSX: '**/*.jsx',
         public: 'public/',
@@ -223,7 +223,7 @@ module.exports = function(pkg, gulp, options) {
                         return Promise.all([
                             fs.writeFile(paths.server.configdest + 'config.js',
                                     'module.exports = ' + JSON.stringify(options.serverConfig, null, 4) + ';'),
-                            fs.writeFile(paths.browser.src + 'config-browser.js',
+                            fs.writeFile(paths.browser.dist + 'config-browser.js',
                                     '// Auto generated file from yaml\n' +
                                     'module.exports = ' + JSON.stringify(options.browserConfig, null, 4) + ';'),
                         ]);
@@ -296,9 +296,10 @@ module.exports = function(pkg, gulp, options) {
     /* Tasks */
 
     if (argv['no-lint']) {
-        gulp.task(prefix + 'browser-js', [prefix + 'browserifyjs']);
+        gulp.task(prefix + 'browser-js', [prefix + 'browser-common-js', prefix + 'browser-buildjs']);
     } else {
-        gulp.task(prefix + 'browser-js', [prefix + 'browser-lintjs', prefix + 'browserifyjs']);
+        gulp.task(prefix + 'browser-js', [prefix + 'browser-lintjs',
+                                            prefix + 'browser-common-js', prefix + 'browser-buildjs']);
     }
     // gulp.task(prefix + 'browser-css', [prefix + 'browser-concatcss']);
     if (paths.server) {

@@ -51,7 +51,8 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         "maxlen": 120,
         "boss": true,
         "eqnull": true,
-        "node": true
+        "node": true,
+        linter: require('jshint-jsx').JSXHINT
     }, options.jshintOptions || {});
     options.jshintBrowserOptions = Object.assign({"browser": true}, jshintOptions, options.jshintBrowserOptions || {});
     options.jshintServerOptions = Object.assign({"browser": false}, jshintOptions, options.jshintServerOptions || {});

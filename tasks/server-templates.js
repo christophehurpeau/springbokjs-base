@@ -28,13 +28,13 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         {
             suffix: 'ejs',
             path: paths.templatesEJS
-        },
+        }/*,
         {
             suffix: 'jsx',
             path: paths.templatesJSX,
             isJs: true,
             pipe: plugins.react
-        }
+        }*/
     ].forEach(function(templateOptions) {
         if (!templateOptions.path) {
             return;

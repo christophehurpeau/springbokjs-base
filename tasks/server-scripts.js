@@ -8,10 +8,11 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
 
     var sourceRoot = function(src, dest, file) {
         var slashMatches = file.relative.match(/\//g);
-        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length)
-                         + (slashMatches && '../'.repeat(slashMatches.length) || '')
-                         + src.replace(/\/+$/, '');
+        return '../'.repeat(dest.replace(/\/+$/, '').split('/').length) +
+                         (slashMatches && '../'.repeat(slashMatches.length) || '') +
+                         src.replace(/\/+$/, '');
     };
+
 
     gulp.task(options.prefix + 'server-buildjs', [options.prefix + 'server-common-js'], function() {
         var logPrefix = options.prefix + 'server-buildjs: ';
@@ -35,7 +36,7 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         paths.server.common && paths.server.common
     ].filter(function(elt) { return !!elt; });
 
-    gulp.task(options.prefix + 'server-common-js', function() {
+    gulp.task(options.prefix + 'server-common-js', [], function() {
         var logPrefix = options.prefix + 'server-common-js: ';
         return merge.apply(merge, commonScripts.map(function(basesrc) {
             return gulp.src(basesrc + paths.scripts)
@@ -53,12 +54,14 @@ module.exports = function(gulp, plugins, options, logAndNotify, pkg) {
         }));
     });
 
+
     return function(logfileChanged) {
         gulp.watch(paths.server.src + paths.scripts, [options.prefix + 'server-js'])
             .on('change', logfileChanged('server.scripts'));
         commonScripts.forEach(function(commonbase) {
-            gulp.watch(commonbase + paths.scripts, [options.prefix + 'server-common-js'])
-                .on('change', logfileChanged('server.commonScripts'));
+            gulp.watch(commonbase + paths.scripts, [options.prefix + 'server-common-js',
+                            options.prefix + 'browser-common-js'])
+                .on('change', logfileChanged('commonScripts'));
         });
     };
 
