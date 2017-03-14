@@ -1,5 +1,7 @@
 # springbokjs-base [![NPM version][npm-image]][npm-url]
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/christophehurpeau/springbokjs-base.svg)](https://greenkeeper.io/)
+
 A collection of gulp tasks
 
 
